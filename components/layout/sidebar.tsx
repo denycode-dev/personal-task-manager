@@ -105,7 +105,7 @@ export function Sidebar() {
       {!sidebarMinimized ? (
         <div className="pt-3 border-t-2 border-black/10 text-[11px] text-muted-foreground font-semibold px-2">
           <p>Denycode Task Manager</p>
-          <p className="text-[10px] text-neutral-400">v1.0 • Personal App</p>
+          <p className="text-[10px] text-neutral-400">Deni Irawan Nugraha</p>
         </div>
       ) : (
         <div className="pt-2 border-t-2 border-black/10 flex justify-center text-muted-foreground">

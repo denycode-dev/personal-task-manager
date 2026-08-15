@@ -12,8 +12,14 @@ const DEFAULT_COLUMNS = [
 ];
 
 export const boardService = {
-  async getAll(): Promise<KanbanBoard[]> {
-    return boardRepository.findAll();
+  async getAll(folderId?: string): Promise<KanbanBoard[]> {
+    return boardRepository.findAll(folderId);
+  },
+
+  async getById(id: string): Promise<KanbanBoard> {
+    const board = await boardRepository.findById(id);
+    if (!board) throw new NotFoundError("Board tidak ditemukan.");
+    return board;
   },
 
   async create(input: CreateBoardInput): Promise<KanbanBoard> {
@@ -27,6 +33,14 @@ export const boardService = {
     );
 
     return board;
+  },
+
+  async update(id: string, data: { title?: string; folderId?: string | null }): Promise<KanbanBoard> {
+    const existing = await boardRepository.findById(id);
+    if (!existing) throw new NotFoundError("Board tidak ditemukan.");
+    const updated = await boardRepository.update(id, data);
+    if (!updated) throw new NotFoundError("Gagal memperbarui board.");
+    return updated;
   },
 
   async delete(id: string): Promise<void> {

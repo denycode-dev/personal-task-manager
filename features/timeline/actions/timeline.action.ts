@@ -14,11 +14,28 @@ export async function createTimelineEventAction(input: {
 }): Promise<ActionResult<TimelineEvent>> {
   await requireAuth();
   if (!input.title?.trim()) return { success: false, error: "Judul wajib diisi." };
+  
+  const startDate = new Date(input.startAt);
+  if (isNaN(startDate.getTime())) {
+    return { success: false, error: "Waktu mulai tidak valid." };
+  }
+
+  let endDate: Date | null = null;
+  if (input.endAt && input.endAt.trim()) {
+    endDate = new Date(input.endAt);
+    if (isNaN(endDate.getTime())) {
+      return { success: false, error: "Waktu selesai tidak valid." };
+    }
+    if (endDate < startDate) {
+      return { success: false, error: "Waktu selesai harus setelah waktu mulai." };
+    }
+  }
+
   const event = await timelineService.create({
     title: input.title.trim(),
     description: input.description || null,
-    startAt: new Date(input.startAt),
-    endAt: input.endAt ? new Date(input.endAt) : null,
+    startAt: startDate,
+    endAt: endDate,
     color: input.color,
   });
   revalidatePath("/calendar");

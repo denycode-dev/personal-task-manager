@@ -5,7 +5,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import type { EventClickArg, EventSourceFuncArg, EventContentArg } from "@fullcalendar/core";
+import type { EventClickArg, EventSourceFuncArg, EventContentArg, DateSelectArg } from "@fullcalendar/core";
 import {
   createTimelineEventAction,
   deleteTimelineEventAction,
@@ -57,12 +57,21 @@ type SelectedEventDetail = {
   url?: string;
 };
 
+const formatLocalDateTime = (d: Date = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 const emptyForm = (): EventForm => ({
   title: "",
   description: "",
-  startAt: new Date().toISOString().slice(0, 16),
+  startAt: formatLocalDateTime(),
   endAt: "",
-  color: "#F72585",
+  color: "#FFD500",
 });
 
 export function CalendarView() {
@@ -167,7 +176,41 @@ export function CalendarView() {
   };
 
   const handleDateClick = (arg: { dateStr: string; date: Date }) => {
-    setForm({ ...emptyForm(), startAt: arg.dateStr + "T09:00" });
+    const dateOnly = arg.dateStr.includes("T") ? arg.dateStr.slice(0, 10) : arg.dateStr;
+    setForm({ ...emptyForm(), startAt: `${dateOnly}T09:00` });
+    setFormOpen(true);
+  };
+
+  const handleDateSelect = (info: DateSelectArg) => {
+    if (info.allDay) {
+      const startDate = new Date(info.start);
+      const endDate = new Date(info.end);
+      const diffDays = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      const startYear = startDate.getFullYear();
+      const startMonth = String(startDate.getMonth() + 1).padStart(2, "0");
+      const startDay = String(startDate.getDate()).padStart(2, "0");
+      const startStr = `${startYear}-${startMonth}-${startDay}T09:00`;
+
+      if (diffDays > 1) {
+        // Multi-day drag selection (FullCalendar end is exclusive)
+        const actualEnd = new Date(endDate.getTime() - (1000 * 60 * 60 * 24));
+        const endYear = actualEnd.getFullYear();
+        const endMonth = String(actualEnd.getMonth() + 1).padStart(2, "0");
+        const endDay = String(actualEnd.getDate()).padStart(2, "0");
+        const endStr = `${endYear}-${endMonth}-${endDay}T18:00`;
+        setForm({ ...emptyForm(), startAt: startStr, endAt: endStr });
+        setFormOpen(true);
+        return;
+      }
+      setForm({ ...emptyForm(), startAt: startStr, endAt: "" });
+      setFormOpen(true);
+      return;
+    }
+
+    const startFormatted = formatLocalDateTime(info.start);
+    const endFormatted = info.end ? formatLocalDateTime(info.end) : "";
+    setForm({ ...emptyForm(), startAt: startFormatted, endAt: endFormatted });
     setFormOpen(true);
   };
 
@@ -193,6 +236,10 @@ export function CalendarView() {
 
   const handleSubmit = () => {
     if (!form.title.trim() || !form.startAt) return;
+    if (form.endAt && new Date(form.endAt) < new Date(form.startAt)) {
+      toast.error("Waktu selesai harus setelah waktu mulai.");
+      return;
+    }
     startTransition(async () => {
       const result = await createTimelineEventAction({
         title: form.title.trim(),
@@ -222,17 +269,15 @@ export function CalendarView() {
         className="flex items-center gap-1 w-full px-1 py-0.5 overflow-hidden text-ellipsis whitespace-nowrap cursor-pointer text-[10px] sm:text-[11px] font-black leading-none select-none"
         title={`${eventInfo.event.title} (${eventInfo.timeText || ""})`}
       >
-        {isStart && (
-          <span className="shrink-0 text-black">
-            {type === "kanban" ? (
-              <Kanban size={11} weight="bold" />
-            ) : type === "checklist" ? (
-              <CheckSquare size={11} weight="bold" />
-            ) : (
-              <Flag size={11} weight="bold" />
-            )}
-          </span>
-        )}
+        <span className="shrink-0 text-black">
+          {type === "kanban" ? (
+            <Kanban size={11} weight="bold" />
+          ) : type === "checklist" ? (
+            <CheckSquare size={11} weight="bold" />
+          ) : (
+            <Flag size={11} weight="bold" />
+          )}
+        </span>
         <span className="truncate flex-1 min-w-0 text-black tracking-tight">
           {eventInfo.event.title}
         </span>
@@ -427,9 +472,6 @@ export function CalendarView() {
         [&_.fc-daygrid-day-number]:!text-[11px] sm:[&_.fc-daygrid-day-number]:!text-xs 
         [&_.fc-daygrid-day-number]:!p-1 
         [&_.fc-day-today]:!bg-yellow-50/80 
-        [&_.fc-daygrid-day-frame]:!overflow-hidden
-        [&_.fc-daygrid-day-events]:!overflow-hidden
-        [&_.fc-daygrid-event-harness]:!max-w-full
         [&_.fc-daygrid-event-harness]:!mb-1
         [&_.fc-daygrid-event]:!border-2
         [&_.fc-daygrid-event]:!border-black
@@ -446,6 +488,10 @@ export function CalendarView() {
         [&_.fc-daygrid-dot-event]:!shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]
         [&_.fc-daygrid-dot-event]:!rounded-xs
         [&_.fc-daygrid-dot]:!hidden
+        [&_.fc-event:not(.fc-event-start)]:!rounded-l-none
+        [&_.fc-event:not(.fc-event-start)]:!border-l-dashed
+        [&_.fc-event:not(.fc-event-end)]:!rounded-r-none
+        [&_.fc-event:not(.fc-event-end)]:!border-r-dashed
         [&_.fc-timegrid-event]:!border-2
         [&_.fc-timegrid-event]:!border-black
         [&_.fc-timegrid-event]:!shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]
@@ -482,9 +528,11 @@ export function CalendarView() {
           headerToolbar={false}
           events={fetchEvents}
           eventClick={handleEventClick}
+          select={handleDateSelect}
           dateClick={handleDateClick}
           height="100%"
           eventDisplay="block"
+          defaultTimedEventDuration="00:00:00"
           nextDayThreshold="00:00:00"
           dayMaxEvents={isMobile ? 2 : 3}
           moreLinkContent={(args) => `+${args.num} lainnya`}
@@ -492,6 +540,7 @@ export function CalendarView() {
           nowIndicator
           editable={false}
           selectable
+          selectMirror
         />
       </div>
 

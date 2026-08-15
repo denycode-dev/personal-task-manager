@@ -8,6 +8,7 @@ import {
 } from "@/features/folders/actions/folder.action";
 import { toast } from "sonner";
 import { useConfirm } from "@/lib/hooks/use-confirm";
+import Link from "next/link";
 import {
   Trash,
   Plus,
@@ -16,9 +17,13 @@ import {
   FolderOpen,
   PencilSimple,
   X,
+  Note,
+  Kanban,
+  CheckSquareOffset,
 } from "@phosphor-icons/react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Folder as FolderType } from "@/lib/db/schema";
+import type { FolderWithCounts } from "@/features/folders/services/folder.service";
 
 // 12 neobrutalism preset colors
 const PRESET_COLORS = [
@@ -64,8 +69,12 @@ function ColorPicker({
   );
 }
 
-export function FolderList({ initialFolders }: { initialFolders: FolderType[] }) {
-  const [folders, setFolders] = useState(initialFolders);
+export function FolderList({
+  initialFolders,
+}: {
+  initialFolders: (FolderType | FolderWithCounts)[];
+}) {
+  const [folders, setFolders] = useState<(FolderType | FolderWithCounts)[]>(initialFolders);
   const [name, setName] = useState("");
   const [color, setColor] = useState(PRESET_COLORS[0].value);
 
@@ -82,7 +91,10 @@ export function FolderList({ initialFolders }: { initialFolders: FolderType[] })
     startTransition(async () => {
       const result = await createFolderAction({ name: name.trim(), color });
       if (result.success) {
-        setFolders((prev) => [...prev, result.data]);
+        setFolders((prev) => [
+          ...prev,
+          { ...result.data, notesCount: 0, boardsCount: 0, checklistsCount: 0 },
+        ]);
         setName("");
         toast.success("Folder berhasil dibuat.");
       } else toast.error(result.error);
@@ -113,24 +125,23 @@ export function FolderList({ initialFolders }: { initialFolders: FolderType[] })
       });
       if (result.success) {
         setFolders((prev) =>
-          prev.map((f) => (f.id === editingFolder.id ? result.data : f))
+          prev.map((f) => (f.id === editingFolder.id ? { ...f, ...result.data } : f))
         );
         setEditingFolder(null);
         toast.success("Folder berhasil diperbarui.");
-      } else {
-        toast.error(result.error);
-      }
+      } else toast.error(result.error);
     });
   };
 
   const handleDelete = async (id: string, folderName: string) => {
     const ok = await confirm({
       title: "Hapus Folder",
-      message: `Hapus folder "${folderName}"? Catatan di dalam folder ini tidak akan ikut terhapus (hanya dilepas dari kategori).`,
-      confirmLabel: "Hapus",
+      message: `Hapus folder "${folderName}"? Catatan, papan kanban, dan checklist di dalamnya tidak akan terhapus, melainkan dikeluarkan dari folder (ungrouped).`,
+      confirmLabel: "Hapus Folder",
       danger: true,
     });
     if (!ok) return;
+
     startTransition(async () => {
       const result = await deleteFolderAction(id);
       if (result.success) {
@@ -143,29 +154,32 @@ export function FolderList({ initialFolders }: { initialFolders: FolderType[] })
   return (
     <div className="space-y-6">
       {/* Create form */}
-      <div className="p-4 sm:p-5 border-2 border-black bg-neutral-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-3">
+      <div className="p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-3">
         <div className="flex items-center gap-2">
-          <FolderPlus size={18} weight="bold" />
-          <p className="text-sm font-black text-black">Buat Folder Baru</p>
+          <FolderPlus size={20} weight="bold" />
+          <h2 className="font-black text-sm">Buat Folder Baru</h2>
         </div>
 
-        <input
-          suppressHydrationWarning
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-          placeholder="Nama folder (misal: Pekerjaan, Ide Proyek, Pribadi)..."
-          className="w-full border-2 border-black px-3 py-2 text-xs focus:outline-none focus:bg-yellow-50"
-          disabled={isPending}
-        />
+        <div className="flex gap-2">
+          <input
+            suppressHydrationWarning
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            placeholder="Nama folder (misal: Pekerjaan, Proyek X, Kuliah)..."
+            disabled={isPending}
+            className="flex-1 border-2 border-black px-3 py-1.5 text-xs bg-white focus:outline-none focus:bg-yellow-50"
+          />
+        </div>
 
         <div>
-          <p className="text-xs font-bold text-neutral-600 mb-1.5">Pilih Warna Penanda:</p>
+          <p className="text-[11px] font-bold text-muted-foreground mb-1.5">Pilih Warna Penanda:</p>
           <ColorPicker value={color} onChange={setColor} />
         </div>
 
         <button
           suppressHydrationWarning
+          type="button"
           onClick={handleCreate}
           disabled={isPending || !name.trim()}
           className="inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-400 hover:bg-yellow-300 border-2 border-black font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 hover:-translate-y-0.5 transition-transform"
@@ -181,51 +195,84 @@ export function FolderList({ initialFolders }: { initialFolders: FolderType[] })
           <FolderOpen size={32} weight="bold" className="mx-auto text-neutral-500" />
           <p className="text-sm font-bold text-black">Belum ada folder kustom.</p>
           <p className="text-xs text-muted-foreground">
-            Buat folder di atas untuk mengelompokkan catatanmu.
+            Buat folder di atas untuk mengelompokkan catatan, papan kanban, dan checklist-mu.
           </p>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {folders.map((folder) => (
-            <li
-              key={folder.id}
-              className="flex items-center justify-between gap-3 p-3.5 border-2 border-black bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span
-                  className="w-4 h-4 flex-shrink-0 border-2 border-black rounded-sm"
-                  style={{ backgroundColor: folder.color }}
-                />
-                <Folder size={18} weight="fill" className="text-neutral-700 shrink-0" />
-                <span className="font-bold text-xs sm:text-sm text-black truncate">
-                  {folder.name}
-                </span>
-              </div>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {folders.map((folder) => {
+            const folderWithCounts = folder as Partial<FolderWithCounts>;
+            return (
+              <li
+                key={folder.id}
+                className="flex flex-col justify-between p-3.5 border-2 border-black bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="w-4 h-4 flex-shrink-0 border-2 border-black rounded-xs"
+                      style={{ backgroundColor: folder.color }}
+                    />
+                    <Folder size={18} weight="fill" className="text-neutral-700 shrink-0" />
+                    <span className="font-black text-sm text-black truncate">
+                      {folder.name}
+                    </span>
+                  </div>
 
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  suppressHydrationWarning
-                  type="button"
-                  onClick={() => handleOpenEdit(folder)}
-                  disabled={isPending}
-                  className="p-1.5 text-neutral-600 hover:text-black hover:bg-neutral-100 border border-transparent hover:border-black rounded transition-colors"
-                  title="Edit folder"
-                >
-                  <PencilSimple size={15} weight="bold" />
-                </button>
-                <button
-                  suppressHydrationWarning
-                  type="button"
-                  onClick={() => handleDelete(folder.id, folder.name)}
-                  disabled={isPending}
-                  className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors"
-                  title="Hapus folder"
-                >
-                  <Trash size={15} weight="bold" />
-                </button>
-              </div>
-            </li>
-          ))}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      suppressHydrationWarning
+                      type="button"
+                      onClick={() => handleOpenEdit(folder)}
+                      disabled={isPending}
+                      className="p-1.5 text-neutral-600 hover:text-black hover:bg-neutral-100 border border-transparent hover:border-black rounded transition-colors"
+                      title="Edit folder"
+                    >
+                      <PencilSimple size={15} weight="bold" />
+                    </button>
+                    <button
+                      suppressHydrationWarning
+                      type="button"
+                      onClick={() => handleDelete(folder.id, folder.name)}
+                      disabled={isPending}
+                      className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors"
+                      title="Hapus folder"
+                    >
+                      <Trash size={15} weight="bold" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cross-type stats with quick-links */}
+                <div className="flex flex-wrap gap-1.5 pt-2 border-t border-black/10">
+                  <Link
+                    href={`/notes?folderId=${folder.id}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 bg-yellow-100 hover:bg-yellow-200 border border-black/30 rounded-xs text-black transition-colors"
+                    title="Lihat catatan di folder ini"
+                  >
+                    <Note size={12} weight="bold" />
+                    <span>{folderWithCounts.notesCount ?? 0} Catatan</span>
+                  </Link>
+                  <Link
+                    href={`/kanban?folderId=${folder.id}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 bg-blue-100 hover:bg-blue-200 border border-black/30 rounded-xs text-black transition-colors"
+                    title="Lihat papan kanban di folder ini"
+                  >
+                    <Kanban size={12} weight="bold" />
+                    <span>{folderWithCounts.boardsCount ?? 0} Kanban</span>
+                  </Link>
+                  <Link
+                    href={`/checklists?folderId=${folder.id}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 bg-emerald-100 hover:bg-emerald-200 border border-black/30 rounded-xs text-black transition-colors"
+                    title="Lihat checklist di folder ini"
+                  >
+                    <CheckSquareOffset size={12} weight="bold" />
+                    <span>{folderWithCounts.checklistsCount ?? 0} Checklist</span>
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 

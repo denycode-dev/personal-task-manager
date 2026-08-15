@@ -13,6 +13,22 @@ export async function createChecklistAction(title: string, folderId?: string): P
   return { success: true, data: cl };
 }
 
+export async function updateChecklistFolderAction(
+  id: string,
+  folderId: string | null
+): Promise<ActionResult<Checklist>> {
+  await requireAuth();
+  try {
+    const updated = await checklistService.update(id, { folderId });
+    revalidatePath("/checklists");
+    revalidatePath(`/checklists/${id}`);
+    revalidatePath("/folders");
+    return { success: true, data: updated };
+  } catch {
+    return { success: false, error: "Gagal memperbarui folder checklist." };
+  }
+}
+
 export async function deleteChecklistAction(id: string): Promise<void> {
   await requireAuth();
   await checklistService.delete(id);

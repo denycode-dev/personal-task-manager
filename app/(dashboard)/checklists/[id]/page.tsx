@@ -6,6 +6,8 @@ import { checklistItemRepository } from "@/features/checklists/repositories/chec
 import { ChecklistItemRow } from "@/features/checklists/components/checklist-item";
 import { AddItemForm } from "@/features/checklists/components/add-item-form";
 import { deleteChecklistAction } from "@/features/checklists/actions/checklist.action";
+import { folderRepository } from "@/features/folders/repositories/folder.repository";
+import { ChecklistFolderPicker } from "@/features/checklists/components/checklist-folder-picker";
 import { DeleteConfirmButton } from "@/components/ui/delete-confirm-button";
 import { ArrowLeft, CheckCircle, ListChecks } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
@@ -22,14 +24,17 @@ export default async function ChecklistDetailPage({
   } catch {
     notFound();
   }
-  const items = await checklistItemRepository.findByChecklistId(id);
+  const [items, folders] = await Promise.all([
+    checklistItemRepository.findByChecklistId(id),
+    folderRepository.findAll(),
+  ]);
   const doneCount = items.filter((i) => i.isDone).length;
   const percentage = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto space-y-6">
       {/* Header Bar */}
-      <div className="flex items-center justify-between gap-3 border-b-2 border-black pb-4">
+      <div className="flex items-center justify-between gap-3 border-b-2 border-black pb-4 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
           <Link
             href="/checklists"
@@ -39,15 +44,23 @@ export default async function ChecklistDetailPage({
             <span className="hidden sm:inline">Checklist</span>
           </Link>
           <span className="text-muted-foreground">/</span>
-          <h1 className="text-xl sm:text-2xl font-black text-black truncate">
+          <h1 className="text-xl sm:text-2xl font-black text-black truncate max-w-[200px] sm:max-w-[350px]">
             {checklist.title}
           </h1>
         </div>
 
-        <DeleteConfirmButton
-          action={deleteChecklistAction.bind(null, id)}
-          confirmMessage={`Hapus checklist "${checklist.title}"? Semua item di dalamnya akan terhapus.`}
-        />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ChecklistFolderPicker
+            checklistId={checklist.id}
+            currentFolderId={checklist.folderId}
+            folders={folders}
+          />
+
+          <DeleteConfirmButton
+            action={deleteChecklistAction.bind(null, id)}
+            confirmMessage={`Hapus checklist "${checklist.title}"? Semua item di dalamnya akan terhapus.`}
+          />
+        </div>
       </div>
 
       {/* Progress Bar Card */}

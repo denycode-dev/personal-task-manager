@@ -17,6 +17,22 @@ export async function createBoardAction(input: unknown): Promise<ActionResult<Ka
   return { success: true, data: board };
 }
 
+export async function updateBoardFolderAction(
+  id: string,
+  folderId: string | null
+): Promise<ActionResult<KanbanBoard>> {
+  await requireAuth();
+  try {
+    const updated = await boardService.update(id, { folderId });
+    revalidatePath("/kanban");
+    revalidatePath(`/kanban/${id}`);
+    revalidatePath("/folders");
+    return { success: true, data: updated };
+  } catch {
+    return { success: false, error: "Gagal memperbarui folder board." };
+  }
+}
+
 export async function deleteBoardAction(id: string): Promise<void> {
   await requireAuth();
   await boardService.delete(id);
