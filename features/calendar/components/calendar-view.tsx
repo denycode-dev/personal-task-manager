@@ -28,6 +28,7 @@ import {
   EyeSlash,
   Funnel,
   ArrowSquareOut,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -618,10 +619,14 @@ export function CalendarView() {
                   type="button"
                   onClick={() => handleDeleteTimelineEvent(selectedEvent.id, selectedEvent.title)}
                   disabled={isPending}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 border-2 border-red-600"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 border-2 border-red-600 disabled:opacity-50"
                 >
-                  <Trash size={14} weight="bold" />
-                  <span>Hapus Event</span>
+                  {isPending ? (
+                    <CircleNotch size={14} weight="bold" className="animate-spin text-red-600" />
+                  ) : (
+                    <Trash size={14} weight="bold" />
+                  )}
+                  <span>{isPending ? "Menghapus..." : "Hapus Event"}</span>
                 </button>
               ) : selectedEvent.url ? (
                 <a
@@ -743,9 +748,16 @@ export function CalendarView() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={isPending || !form.title.trim() || !form.startAt}
-                className="px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 min-w-[120px] justify-center"
               >
-                {isPending ? "Menyimpan…" : "Simpan Event"}
+                {isPending ? (
+                  <>
+                    <CircleNotch size={14} weight="bold" className="animate-spin" />
+                    <span>Menyimpan…</span>
+                  </>
+                ) : (
+                  <span>Simpan Event</span>
+                )}
               </button>
             </div>
           </div>

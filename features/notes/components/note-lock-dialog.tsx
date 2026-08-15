@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Lock, LockOpen, Key, X, ShieldCheck, ArrowCounterClockwise } from "@phosphor-icons/react";
+import { Lock, LockOpen, Key, X, ShieldCheck, ArrowCounterClockwise, CircleNotch } from "@phosphor-icons/react";
 import { lockNoteAction, removeLockAction, resetNotePasswordAction } from "@/features/notes/actions/lock-note.action";
 import { toast } from "sonner";
 
@@ -192,9 +192,16 @@ export function NoteLockDialog({
                     suppressHydrationWarning
                     type="submit"
                     disabled={isPending}
-                    className="px-4 py-1.5 text-xs font-black bg-rose-400 hover:bg-rose-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-black bg-rose-400 hover:bg-rose-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 min-w-[110px] justify-center"
                   >
-                    {isPending ? "Mengunci..." : "Kunci Catatan"}
+                    {isPending ? (
+                      <>
+                        <CircleNotch size={14} weight="bold" className="animate-spin" />
+                        <span>Mengunci...</span>
+                      </>
+                    ) : (
+                      <span>Kunci Catatan</span>
+                    )}
                   </button>
                 </div>
               </form>
@@ -216,7 +223,8 @@ export function NoteLockDialog({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Masukkan password catatan"
-                    className="w-full px-3 py-2 text-xs border-2 border-black focus:outline-none focus:bg-yellow-50"
+                    disabled={isPending}
+                    className="w-full px-3 py-2 text-xs border-2 border-black focus:outline-none focus:bg-yellow-50 disabled:opacity-60"
                   />
                 </div>
 
@@ -225,7 +233,8 @@ export function NoteLockDialog({
                     suppressHydrationWarning
                     type="button"
                     onClick={() => setMode("reset")}
-                    className="text-xs font-bold text-black underline flex items-center gap-1"
+                    disabled={isPending}
+                    className="text-xs font-bold text-black underline flex items-center gap-1 disabled:opacity-50"
                   >
                     <ArrowCounterClockwise size={13} weight="bold" />
                     <span>Lupa Password?</span>
@@ -236,7 +245,8 @@ export function NoteLockDialog({
                       suppressHydrationWarning
                       type="button"
                       onClick={() => setIsOpen(false)}
-                      className="px-3 py-1.5 text-xs font-bold border-2 border-black bg-neutral-100 hover:bg-neutral-200"
+                      disabled={isPending}
+                      className="px-3 py-1.5 text-xs font-bold border-2 border-black bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50"
                     >
                       Batal
                     </button>
@@ -244,9 +254,16 @@ export function NoteLockDialog({
                       suppressHydrationWarning
                       type="submit"
                       disabled={isPending}
-                      className="px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 min-w-[140px] justify-center"
                     >
-                      {isPending ? "Membuka..." : "Buka Kunci Permanen"}
+                      {isPending ? (
+                        <>
+                          <CircleNotch size={14} weight="bold" className="animate-spin" />
+                          <span>Membuka...</span>
+                        </>
+                      ) : (
+                        <span>Buka Kunci Permanen</span>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -269,7 +286,8 @@ export function NoteLockDialog({
                     value={appPassword}
                     onChange={(e) => setAppPassword(e.target.value)}
                     placeholder="Password login aplikasi"
-                    className="w-full px-3 py-2 text-xs border-2 border-black focus:outline-none focus:bg-yellow-50"
+                    disabled={isPending}
+                    className="w-full px-3 py-2 text-xs border-2 border-black focus:outline-none focus:bg-yellow-50 disabled:opacity-60"
                   />
                 </div>
 
@@ -283,7 +301,8 @@ export function NoteLockDialog({
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Password baru (min 4 karakter)"
-                    className="w-full px-3 py-2 text-xs border-2 border-black focus:outline-none focus:bg-yellow-50"
+                    disabled={isPending}
+                    className="w-full px-3 py-2 text-xs border-2 border-black focus:outline-none focus:bg-yellow-50 disabled:opacity-60"
                   />
                 </div>
 
@@ -292,7 +311,8 @@ export function NoteLockDialog({
                     suppressHydrationWarning
                     type="button"
                     onClick={() => setMode("remove")}
-                    className="text-xs font-bold text-muted-foreground hover:text-black"
+                    disabled={isPending}
+                    className="text-xs font-bold text-muted-foreground hover:text-black disabled:opacity-50"
                   >
                     Kembali
                   </button>
@@ -302,7 +322,8 @@ export function NoteLockDialog({
                       suppressHydrationWarning
                       type="button"
                       onClick={() => setIsOpen(false)}
-                      className="px-3 py-1.5 text-xs font-bold border-2 border-black bg-neutral-100 hover:bg-neutral-200"
+                      disabled={isPending}
+                      className="px-3 py-1.5 text-xs font-bold border-2 border-black bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50"
                     >
                       Batal
                     </button>
@@ -310,9 +331,16 @@ export function NoteLockDialog({
                       suppressHydrationWarning
                       type="submit"
                       disabled={isPending}
-                      className="px-4 py-1.5 text-xs font-black bg-emerald-400 hover:bg-emerald-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-black bg-emerald-400 hover:bg-emerald-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 min-w-[140px] justify-center"
                     >
-                      {isPending ? "Mereset..." : "Simpan Password Baru"}
+                      {isPending ? (
+                        <>
+                          <CircleNotch size={14} weight="bold" className="animate-spin" />
+                          <span>Mereset...</span>
+                        </>
+                      ) : (
+                        <span>Simpan Password Baru</span>
+                      )}
                     </button>
                   </div>
                 </div>

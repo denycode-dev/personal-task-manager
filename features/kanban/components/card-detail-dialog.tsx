@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Trash, Paperclip, UploadSimple, Image as ImageIcon, FileText, DownloadSimple, X } from "@phosphor-icons/react";
+import { Trash, Paperclip, UploadSimple, Image as ImageIcon, FileText, DownloadSimple, X, CircleNotch } from "@phosphor-icons/react";
 import { updateCardAction, deleteCardAction } from "@/features/kanban/actions/card.action";
 import {
   getCardAttachmentsAction,
@@ -248,13 +248,17 @@ export function CardDetailDialog({ card, open, onClose, onUpdated, onDeleted }: 
                 />
                 <label
                   htmlFor="card-file-upload"
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-transform ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-transform ${
                     isUploading
                       ? "bg-neutral-200 opacity-60 pointer-events-none"
                       : "bg-yellow-400 hover:bg-yellow-300 hover:-translate-y-0.5"
                   }`}
                 >
-                  <UploadSimple size={14} weight="bold" />
+                  {isUploading ? (
+                    <CircleNotch size={14} weight="bold" className="animate-spin" />
+                  ) : (
+                    <UploadSimple size={14} weight="bold" />
+                  )}
                   <span>{isUploading ? "Mengunggah..." : "+ Unggah"}</span>
                 </label>
               </div>
@@ -278,7 +282,11 @@ export function CardDetailDialog({ card, open, onClose, onUpdated, onDeleted }: 
                           />
                         ) : (
                           <span className="p-1.5 bg-neutral-200 border border-black text-neutral-700 shrink-0">
-                            <FileText size={16} weight="bold" />
+                            {att.fileName.endsWith(".pdf") ? (
+                              <FileText size={16} weight="bold" />
+                            ) : (
+                              <Paperclip size={16} weight="bold" />
+                            )}
                           </span>
                         )}
                         <div className="min-w-0">
@@ -327,10 +335,14 @@ export function CardDetailDialog({ card, open, onClose, onUpdated, onDeleted }: 
               type="button"
               onClick={handleDelete}
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 border-2 border-red-600 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 border-2 border-red-600 transition-colors disabled:opacity-50"
             >
-              <Trash size={14} weight="bold" />
-              <span>Hapus Kartu</span>
+              {isPending ? (
+                <CircleNotch size={14} weight="bold" className="animate-spin text-red-600" />
+              ) : (
+                <Trash size={14} weight="bold" />
+              )}
+              <span>{isPending ? "Menghapus..." : "Hapus Kartu"}</span>
             </button>
 
             <div className="flex items-center gap-2">
@@ -338,7 +350,8 @@ export function CardDetailDialog({ card, open, onClose, onUpdated, onDeleted }: 
                 suppressHydrationWarning
                 type="button"
                 onClick={onClose}
-                className="px-3.5 py-1.5 text-xs font-bold border-2 border-black bg-neutral-100 hover:bg-neutral-200"
+                disabled={isPending}
+                className="px-3.5 py-1.5 text-xs font-bold border-2 border-black bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50"
               >
                 Batal
               </button>
@@ -347,9 +360,16 @@ export function CardDetailDialog({ card, open, onClose, onUpdated, onDeleted }: 
                 type="button"
                 onClick={handleSave}
                 disabled={isPending || !title.trim()}
-                className="px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 min-w-[130px] justify-center"
               >
-                {isPending ? "Menyimpan…" : "Simpan Perubahan"}
+                {isPending ? (
+                  <>
+                    <CircleNotch size={14} weight="bold" className="animate-spin" />
+                    <span>Menyimpan…</span>
+                  </>
+                ) : (
+                  <span>Simpan Perubahan</span>
+                )}
               </button>
             </div>
           </div>

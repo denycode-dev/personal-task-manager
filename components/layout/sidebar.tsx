@@ -79,9 +79,10 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               title={sidebarMinimized ? item.label : undefined}
               className={cn(
-                "flex items-center rounded-none font-bold transition-all",
+                "flex items-center rounded-none font-bold transition-all active:translate-x-0.5 active:translate-y-0.5",
                 sidebarMinimized
                   ? "justify-center p-2.5"
                   : "gap-3 px-3 py-2 text-sm",

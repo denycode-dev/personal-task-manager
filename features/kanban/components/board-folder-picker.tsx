@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { updateBoardFolderAction } from "@/features/kanban/actions/board.action";
 import { useConfirm } from "@/lib/hooks/use-confirm";
 import { toast } from "sonner";
-import { Folder } from "@phosphor-icons/react";
+import { Folder, CircleNotch } from "@phosphor-icons/react";
 import type { Folder as FolderType } from "@/lib/db/schema";
 
 type Props = {
@@ -45,7 +45,11 @@ export function BoardFolderPicker({ boardId, currentFolderId, folders }: Props) 
 
   return (
     <div className="flex items-center gap-1.5">
-      <Folder size={16} weight="fill" className="text-neutral-600 shrink-0" />
+      {isPending ? (
+        <CircleNotch size={16} weight="bold" className="animate-spin text-neutral-800 shrink-0" />
+      ) : (
+        <Folder size={16} weight="fill" className="text-neutral-600 shrink-0" />
+      )}
       <select
         suppressHydrationWarning
         value={folderId}

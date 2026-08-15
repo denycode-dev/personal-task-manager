@@ -10,7 +10,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
-import { Plus, Trash, DotsSixVertical, ArrowRight } from "@phosphor-icons/react";
+import { Plus, Trash, DotsSixVertical, ArrowRight, CircleNotch } from "@phosphor-icons/react";
 import type { KanbanBoard, KanbanCard, KanbanColumn } from "@/lib/db/schema";
 import { createCardAction, reorderCardsAction } from "@/features/kanban/actions/card.action";
 import { createColumnAction, deleteColumnAction } from "@/features/kanban/actions/column.action";
@@ -113,10 +113,14 @@ function KanbanColumnView({
           suppressHydrationWarning
           onClick={handleDeleteColumn}
           disabled={isPending}
-          className="p-1 text-muted-foreground hover:text-red-600 transition-colors cursor-pointer"
+          className="p-1 text-muted-foreground hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center justify-center"
           title="Hapus kolom"
         >
-          <Trash size={14} weight="bold" />
+          {isPending ? (
+            <CircleNotch size={14} weight="bold" className="animate-spin text-red-600" />
+          ) : (
+            <Trash size={14} weight="bold" />
+          )}
         </button>
       </div>
       <SortableContext items={column.cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
@@ -369,9 +373,13 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
               suppressHydrationWarning
               onClick={handleAddCard}
               disabled={isPending || !newTitle.trim()}
-              className="px-3 py-1.5 bg-yellow-400 border-2 border-black text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 border-2 border-black text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 cursor-pointer min-w-[75px] justify-center"
             >
-              Tambah
+              {isPending ? (
+                <CircleNotch size={14} weight="bold" className="animate-spin" />
+              ) : (
+                <span>Tambah</span>
+              )}
             </button>
             <button
               suppressHydrationWarning
@@ -379,7 +387,8 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
                 setAddingCard(false);
                 setNewTitle("");
               }}
-              className="px-3 py-1.5 border-2 border-black text-sm hover:bg-gray-100 cursor-pointer"
+              disabled={isPending}
+              className="px-3 py-1.5 border-2 border-black text-sm hover:bg-gray-100 cursor-pointer disabled:opacity-50"
             >
               Batal
             </button>
@@ -389,7 +398,7 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
             <button
               suppressHydrationWarning
               onClick={() => setAddingCard(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400 border-2 border-black text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-1px] transition-transform cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 border-2 border-black text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-1px] transition-transform cursor-pointer"
             >
               <Plus size={16} weight="bold" /> Tambah Kartu
             </button>
@@ -430,25 +439,31 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
                   value={newColName}
                   onChange={(e) => setNewColName(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") handleAddColumn();
+                    if (e.key === "Enter" && !isPending) handleAddColumn();
                     if (e.key === "Escape") setAddingCol(false);
                   }}
+                  disabled={isPending}
                   placeholder="Nama kolom..."
-                  className="w-full border-2 border-black px-2 py-1 text-sm focus:outline-none"
+                  className="w-full border-2 border-black px-2 py-1 text-sm focus:outline-none disabled:opacity-60"
                 />
                 <div className="flex gap-1">
                   <button
                     suppressHydrationWarning
                     onClick={handleAddColumn}
-                    disabled={isPending}
-                    className="px-3 py-1 text-xs bg-yellow-400 border-2 border-black font-bold cursor-pointer"
+                    disabled={isPending || !newColName.trim()}
+                    className="inline-flex items-center gap-1 px-3 py-1 text-xs bg-yellow-400 hover:bg-yellow-300 border-2 border-black font-bold cursor-pointer disabled:opacity-50 min-w-[65px] justify-center"
                   >
-                    Tambah
+                    {isPending ? (
+                      <CircleNotch size={12} weight="bold" className="animate-spin" />
+                    ) : (
+                      <span>Tambah</span>
+                    )}
                   </button>
                   <button
                     suppressHydrationWarning
                     onClick={() => setAddingCol(false)}
-                    className="px-3 py-1 text-xs border-2 border-black cursor-pointer"
+                    disabled={isPending}
+                    className="px-3 py-1 text-xs border-2 border-black cursor-pointer disabled:opacity-50"
                   >
                     Batal
                   </button>

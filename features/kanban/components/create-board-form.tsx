@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBoardAction } from "@/features/kanban/actions/board.action";
 import { toast } from "sonner";
-import { Plus, Folder } from "@phosphor-icons/react";
+import { Plus, Folder, CircleNotch } from "@phosphor-icons/react";
 import type { Folder as FolderType } from "@/lib/db/schema";
 
 type Props = {
@@ -40,9 +40,9 @@ export function CreateBoardForm({ folders = [], defaultFolderId = "" }: Props) {
         suppressHydrationWarning
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
+        onKeyDown={(e) => e.key === "Enter" && !isPending && submit()}
         placeholder="Nama papan kanban baru..."
-        className="flex-1 border-2 border-black px-3 py-2 text-sm bg-white focus:outline-none focus:bg-yellow-50"
+        className="flex-1 border-2 border-black px-3 py-2 text-sm bg-white focus:outline-none focus:bg-yellow-50 disabled:opacity-60"
         disabled={isPending}
       />
 
@@ -52,7 +52,7 @@ export function CreateBoardForm({ folders = [], defaultFolderId = "" }: Props) {
           value={folderId}
           onChange={(e) => setFolderId(e.target.value)}
           disabled={isPending}
-          className="border-2 border-black px-3 py-2 text-xs sm:text-sm bg-white focus:outline-none focus:bg-yellow-50 font-bold max-w-full sm:max-w-[200px]"
+          className="border-2 border-black px-3 py-2 text-xs sm:text-sm bg-white focus:outline-none focus:bg-yellow-50 font-bold max-w-full sm:max-w-[200px] disabled:opacity-60"
           title="Pilih folder untuk papan ini"
         >
           <option value="">— Tanpa Folder —</option>
@@ -68,10 +68,19 @@ export function CreateBoardForm({ folders = [], defaultFolderId = "" }: Props) {
         suppressHydrationWarning
         onClick={submit}
         disabled={isPending || !title.trim()}
-        className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 border-2 border-black font-black text-xs sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 flex items-center justify-center gap-1.5 active:translate-x-0.5 active:translate-y-0.5 transition-all"
+        className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 border-2 border-black font-black text-xs sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 flex items-center justify-center gap-1.5 active:translate-x-0.5 active:translate-y-0.5 transition-all min-w-[130px]"
       >
-        <Plus size={16} weight="bold" />
-        <span>Buat Papan</span>
+        {isPending ? (
+          <>
+            <CircleNotch size={16} weight="bold" className="animate-spin" />
+            <span>Membuat...</span>
+          </>
+        ) : (
+          <>
+            <Plus size={16} weight="bold" />
+            <span>Buat Papan</span>
+          </>
+        )}
       </button>
     </div>
   );

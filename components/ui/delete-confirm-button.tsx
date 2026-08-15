@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { Trash } from "@phosphor-icons/react";
+import { Trash, CircleNotch } from "@phosphor-icons/react";
 import { useConfirm } from "@/lib/hooks/use-confirm";
 
 type Props = {
@@ -41,11 +41,15 @@ export function DeleteConfirmButton({
       disabled={isPending}
       className={
         className ??
-        "p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors disabled:opacity-50"
+        "p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors disabled:opacity-50 inline-flex items-center justify-center"
       }
-      title={confirmTitle}
+      title={isPending ? "Sedang menghapus..." : confirmTitle}
     >
-      <Trash size={16} weight="bold" />
+      {isPending ? (
+        <CircleNotch size={16} weight="bold" className="animate-spin text-red-600" />
+      ) : (
+        <Trash size={16} weight="bold" />
+      )}
     </button>
   );
 }

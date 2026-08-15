@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { Topbar } from "@/components/layout/topbar";
 import { MobileFAB } from "@/components/layout/mobile-fab";
 import { OfflineBanner } from "@/components/feedback/offline-banner";
+import { ProgressBar } from "@/components/layout/progress-bar";
 
 export default async function DashboardLayout({
   children,
@@ -16,6 +17,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex flex-col min-h-screen">
+      <ProgressBar />
       <OfflineBanner />
       <div className="flex min-h-screen flex-1">
         <Sidebar />

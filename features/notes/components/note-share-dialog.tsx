@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ShareNetwork, Copy, Check, Globe, X } from "@phosphor-icons/react";
+import { ShareNetwork, Copy, Check, Globe, X, CircleNotch } from "@phosphor-icons/react";
 import { toggleShareNoteAction } from "@/features/notes/actions/toggle-share.action";
 import { toast } from "sonner";
 
@@ -102,13 +102,22 @@ export function NoteShareDialog({
                 type="button"
                 disabled={isPending}
                 onClick={handleToggle}
-                className={`px-3 py-1 text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-transform ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-transform disabled:opacity-50 min-w-[90px] justify-center ${
                   isShared
                     ? "bg-emerald-400 text-black hover:bg-emerald-300"
                     : "bg-neutral-200 text-black hover:bg-neutral-300"
                 }`}
               >
-                {isPending ? "Memproses..." : isShared ? "Aktif" : "Nonaktif"}
+                {isPending ? (
+                  <>
+                    <CircleNotch size={13} weight="bold" className="animate-spin" />
+                    <span>Proses...</span>
+                  </>
+                ) : isShared ? (
+                  "Aktif"
+                ) : (
+                  "Nonaktif"
+                )}
               </button>
             </div>
 

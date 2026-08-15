@@ -8,6 +8,7 @@ import {
   Kanban,
   CheckSquare,
   Folder,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import { globalSearchAction } from "@/features/search/actions/global-search.action";
 import type { SearchResultItem } from "@/features/search/types";
@@ -26,6 +27,7 @@ export function GlobalSearch() {
       setOpen(false);
       return;
     }
+    setOpen(true);
     startTransition(async () => {
       const result = await globalSearchAction(value);
       if (result.success) {
@@ -63,11 +65,25 @@ export function GlobalSearch() {
           value={query}
           onChange={(e) => handleChange(e.target.value)}
           placeholder="Cari catatan, kanban, checklist..."
-          className="w-full pl-9 pr-3 py-1.5 text-xs font-medium border-2 border-black focus:outline-none focus:bg-yellow-50 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          className="w-full pl-9 pr-8 py-1.5 text-xs font-medium border-2 border-black focus:outline-none focus:bg-yellow-50 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
           onFocus={() => results.length > 0 && setOpen(true)}
         />
+        {isPending && (
+          <CircleNotch
+            size={14}
+            weight="bold"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-neutral-600"
+          />
+        )}
       </div>
+
+      {open && isPending && query.length >= 2 && results.length === 0 && (
+        <div className="absolute top-full mt-1 left-0 right-0 bg-white border-2 border-black p-3 text-xs text-neutral-600 z-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2">
+          <CircleNotch size={14} weight="bold" className="animate-spin text-black" />
+          <span>Mencari &quot;{query}&quot;...</span>
+        </div>
+      )}
 
       {open && results.length > 0 && (
         <ul className="absolute top-full mt-1 left-0 right-0 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50 max-h-64 overflow-y-auto divide-y divide-black/10 animate-in fade-in zoom-in-95">

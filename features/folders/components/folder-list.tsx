@@ -20,6 +20,7 @@ import {
   Note,
   Kanban,
   CheckSquareOffset,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Folder as FolderType } from "@/lib/db/schema";
@@ -182,10 +183,19 @@ export function FolderList({
           type="button"
           onClick={handleCreate}
           disabled={isPending || !name.trim()}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-400 hover:bg-yellow-300 border-2 border-black font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 hover:-translate-y-0.5 transition-transform"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-400 hover:bg-yellow-300 border-2 border-black font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 hover:-translate-y-0.5 transition-transform min-w-[120px] justify-center"
         >
-          <Plus size={14} weight="bold" />
-          <span>Buat Folder</span>
+          {isPending ? (
+            <>
+              <CircleNotch size={14} weight="bold" className="animate-spin" />
+              <span>Membuat...</span>
+            </>
+          ) : (
+            <>
+              <Plus size={14} weight="bold" />
+              <span>Buat Folder</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -225,7 +235,7 @@ export function FolderList({
                       type="button"
                       onClick={() => handleOpenEdit(folder)}
                       disabled={isPending}
-                      className="p-1.5 text-neutral-600 hover:text-black hover:bg-neutral-100 border border-transparent hover:border-black rounded transition-colors"
+                      className="p-1.5 text-neutral-600 hover:text-black hover:bg-neutral-100 border border-transparent hover:border-black rounded transition-colors disabled:opacity-50"
                       title="Edit folder"
                     >
                       <PencilSimple size={15} weight="bold" />
@@ -235,7 +245,7 @@ export function FolderList({
                       type="button"
                       onClick={() => handleDelete(folder.id, folder.name)}
                       disabled={isPending}
-                      className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors"
+                      className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors disabled:opacity-50"
                       title="Hapus folder"
                     >
                       <Trash size={15} weight="bold" />
@@ -299,7 +309,8 @@ export function FolderList({
                   autoFocus
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full border-2 border-black px-3 py-2 text-xs focus:outline-none focus:bg-yellow-50"
+                  className="w-full border-2 border-black px-3 py-2 text-xs focus:outline-none focus:bg-yellow-50 disabled:opacity-60"
+                  disabled={isPending}
                 />
               </div>
 
@@ -313,7 +324,8 @@ export function FolderList({
                   suppressHydrationWarning
                   type="button"
                   onClick={() => setEditingFolder(null)}
-                  className="px-3.5 py-1.5 text-xs font-bold border-2 border-black bg-neutral-100 hover:bg-neutral-200"
+                  disabled={isPending}
+                  className="px-3.5 py-1.5 text-xs font-bold border-2 border-black bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50"
                 >
                   Batal
                 </button>
@@ -322,9 +334,16 @@ export function FolderList({
                   type="button"
                   onClick={handleSaveEdit}
                   disabled={isPending || !editName.trim()}
-                  className="px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 min-w-[130px] justify-center"
                 >
-                  {isPending ? "Menyimpan…" : "Simpan Perubahan"}
+                  {isPending ? (
+                    <>
+                      <CircleNotch size={14} weight="bold" className="animate-spin" />
+                      <span>Menyimpan…</span>
+                    </>
+                  ) : (
+                    <span>Simpan Perubahan</span>
+                  )}
                 </button>
               </div>
             </div>

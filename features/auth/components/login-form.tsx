@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { loginAction } from "@/features/auth/actions/login.action";
 import { Button } from "@/components/ui/button";
-import { LockKey, SignIn } from "@phosphor-icons/react";
+import { LockKey, SignIn, CircleNotch } from "@phosphor-icons/react";
 
 export function LoginForm() {
   const [state, action, isPending] = useActionState(loginAction, null);
@@ -44,10 +44,19 @@ export function LoginForm() {
         suppressHydrationWarning
         type="submit"
         disabled={isPending}
-        className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform disabled:opacity-50 min-h-[36px]"
       >
-        <SignIn size={16} weight="bold" />
-        <span>{isPending ? "Memproses..." : "Masuk"}</span>
+        {isPending ? (
+          <>
+            <CircleNotch size={16} weight="bold" className="animate-spin" />
+            <span>Memproses...</span>
+          </>
+        ) : (
+          <>
+            <SignIn size={16} weight="bold" />
+            <span>Masuk</span>
+          </>
+        )}
       </button>
     </form>
   );

@@ -13,7 +13,7 @@ import { updateNoteAction } from "@/features/notes/actions/update-note.action";
 import { unlockNoteAction, saveLockedNoteAction } from "@/features/notes/actions/lock-note.action";
 import { toast } from "sonner";
 import { AUTO_SAVE_DEBOUNCE_MS } from "@/config/app";
-import { Lock, Key, ArrowRight, ShieldCheck } from "@phosphor-icons/react";
+import { Lock, Key, ArrowRight, ShieldCheck, CircleNotch } from "@phosphor-icons/react";
 import type { Note } from "@/lib/db/schema";
 
 type Props = {
@@ -153,11 +153,20 @@ export function NoteEditor({ note, isLocked = false }: Props) {
             <button
               suppressHydrationWarning
               type="submit"
-              disabled={isUnlocking}
-              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform"
+              disabled={isUnlocking || !unlockPasswordInput}
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform disabled:opacity-50 min-h-[36px]"
             >
-              <Key size={16} weight="bold" />
-              <span>{isUnlocking ? "Mendekripsi..." : "Buka Catatan"}</span>
+              {isUnlocking ? (
+                <>
+                  <CircleNotch size={16} weight="bold" className="animate-spin" />
+                  <span>Mendekripsi...</span>
+                </>
+              ) : (
+                <>
+                  <Key size={16} weight="bold" />
+                  <span>Buka Catatan</span>
+                </>
+              )}
             </button>
           </form>
 
