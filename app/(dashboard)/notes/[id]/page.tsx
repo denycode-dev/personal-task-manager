@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { noteService } from "@/features/notes/services/note.service";
 import { noteLockService } from "@/features/notes/services/note-lock.service";
 import { noteShareService } from "@/features/notes/services/note-share.service";
@@ -12,13 +13,31 @@ import { NoteLockDialog } from "@/features/notes/components/note-lock-dialog";
 import { DeleteConfirmButton } from "@/components/ui/delete-confirm-button";
 import { deleteNoteAction } from "@/features/notes/actions/delete-note.action";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
+import { APP_NAME } from "@/config/app";
 import Link from "next/link";
 
-export default async function NotePage({
-  params,
-}: {
+interface NotePageProps {
   params: Promise<{ id: string }>;
-}) {
+}
+
+export async function generateMetadata({
+  params,
+}: NotePageProps): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const note = await noteService.getById(id);
+    const title = note.title?.trim() || "Catatan";
+    return {
+      title: `${title} — ${APP_NAME}`,
+    };
+  } catch {
+    return {
+      title: `Catatan — ${APP_NAME}`,
+    };
+  }
+}
+
+export default async function NotePage({ params }: NotePageProps) {
   const { id } = await params;
 
   let note;
@@ -61,6 +80,7 @@ export default async function NotePage({
 
           <NoteShareDialog
             noteId={id}
+            noteTitle={note.title}
             initialIsShared={shareStatus.isShared}
             initialSlug={shareStatus.publicSlug}
           />

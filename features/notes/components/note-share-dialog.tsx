@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { ShareNetwork, Copy, Check, Globe, X, CircleNotch } from "@phosphor-icons/react";
+import { useState, useTransition, useEffect } from "react";
+import { ShareNetwork, Copy, Check, Globe, X, CircleNotch, PaperPlaneRight } from "@phosphor-icons/react";
 import { toggleShareNoteAction } from "@/features/notes/actions/toggle-share.action";
 import { toast } from "sonner";
 
 interface NoteShareDialogProps {
   noteId: string;
+  noteTitle?: string;
   initialIsShared: boolean;
   initialSlug: string | null;
 }
 
 export function NoteShareDialog({
   noteId,
+  noteTitle,
   initialIsShared,
   initialSlug,
 }: NoteShareDialogProps) {
@@ -20,7 +22,14 @@ export function NoteShareDialog({
   const [isShared, setIsShared] = useState(initialIsShared);
   const [slug, setSlug] = useState(initialSlug);
   const [copied, setCopied] = useState(false);
+  const [canNativeShare, setCanNativeShare] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      setCanNativeShare(true);
+    }
+  }, []);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const shareUrl = slug ? `${origin}/notes/public/${slug}` : "";
@@ -51,6 +60,25 @@ export function NoteShareDialog({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleNativeShare = async () => {
+    if (!shareUrl) return;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: noteTitle ? `${noteTitle} — Denycode Task Manager` : "Denycode Task Manager",
+          text: noteTitle ? `Catatan: ${noteTitle}` : "Lihat catatan publik ini di Denycode",
+          url: shareUrl,
+        });
+      } catch (err) {
+        if ((err as Error)?.name !== "AbortError") {
+          handleCopy();
+        }
+      }
+    } else {
+      handleCopy();
+    }
+  };
+
   return (
     <>
       <button
@@ -74,7 +102,14 @@ export function NoteShareDialog({
                 <span className="p-1.5 bg-purple-300 border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-black">
                   <Globe size={18} weight="bold" />
                 </span>
-                <h3 className="font-black text-base text-black">Bagikan Catatan</h3>
+                <div>
+                  <h3 className="font-black text-base text-black">Bagikan Catatan</h3>
+                  {noteTitle && (
+                    <p className="text-[11px] font-bold text-neutral-600 truncate max-w-[260px]">
+                      {noteTitle}
+                    </p>
+                  )}
+                </div>
               </div>
               <button
                 suppressHydrationWarning
@@ -87,7 +122,7 @@ export function NoteShareDialog({
             </div>
 
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Aktifkan tautan publik agar catatan ini dapat dibaca oleh siapa saja tanpa perlu login.
+              Aktifkan tautan publik agar catatan ini dapat dibaca langsung oleh siapa saja yang memiliki link. Metadata (judul, preview, dsb.) akan otomatis mengikuti identitas catatan.
             </p>
 
             <div className="flex items-center justify-between p-3 border-2 border-black bg-neutral-50">
@@ -122,25 +157,40 @@ export function NoteShareDialog({
             </div>
 
             {isShared && shareUrl && (
-              <div className="space-y-2">
-                <label className="text-xs font-black text-black">Tautan Publik:</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    suppressHydrationWarning
-                    readOnly
-                    value={shareUrl}
-                    className="flex-1 px-3 py-1.5 text-xs font-mono border-2 border-black bg-neutral-100 select-all"
-                  />
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-black">Tautan Publik:</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      suppressHydrationWarning
+                      readOnly
+                      value={shareUrl}
+                      className="flex-1 px-3 py-1.5 text-xs font-mono border-2 border-black bg-neutral-100 select-all"
+                    />
+                    <button
+                      suppressHydrationWarning
+                      type="button"
+                      onClick={handleCopy}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      title="Salin Tautan"
+                    >
+                      {copied ? <Check size={14} weight="bold" /> : <Copy size={14} weight="bold" />}
+                      <span>{copied ? "Tersalin" : "Salin"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {canNativeShare && (
                   <button
                     suppressHydrationWarning
                     type="button"
-                    onClick={handleCopy}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    onClick={handleNativeShare}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-black bg-purple-300 hover:bg-purple-200 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform"
                   >
-                    {copied ? <Check size={14} weight="bold" /> : <Copy size={14} weight="bold" />}
-                    <span>{copied ? "Tersalin" : "Salin"}</span>
+                    <PaperPlaneRight size={15} weight="bold" />
+                    <span>Bagikan ke Aplikasi Lain (WhatsApp, Telegram, dll)</span>
                   </button>
-                </div>
+                )}
               </div>
             )}
 
