@@ -30,6 +30,7 @@ import {
   calculateReadingStats,
   extractTableOfContents,
   extractPlainText,
+  downloadMarkdownFile,
 } from "@/features/notes/utils/reading-utils";
 
 interface PublicNoteViewerProps {
@@ -209,6 +210,19 @@ export function PublicNoteViewer({
     }
   };
 
+  const handleExportMarkdown = () => {
+    if (!unlocked) {
+      toast.error("Buka catatan terlebih dahulu untuk mengekspor.");
+      return;
+    }
+    try {
+      downloadMarkdownFile(title, content, updatedAt);
+      toast.success("Catatan berhasil diekspor sebagai file Markdown (.md)!");
+    } catch {
+      toast.error("Gagal mengekspor catatan ke file Markdown.");
+    }
+  };
+
   const handleShare = async () => {
     const shareData = {
       title: title || "Catatan Denycode",
@@ -367,7 +381,7 @@ export function PublicNoteViewer({
 
       {/* 3. Main Reader Area */}
       <main
-        className={`mx-auto px-3 sm:px-6 py-6 sm:py-10 transition-all duration-200 ${widthClasses}`}
+        className={`mx-auto px-2 sm:px-6 py-4 sm:py-10 transition-all duration-200 ${widthClasses} max-w-full`}
       >
         {/* Floating Focus Mode Banner */}
         {preferences.focusMode && (
@@ -389,7 +403,7 @@ export function PublicNoteViewer({
 
         {/* Reader Container Card */}
         <div
-          className={`p-6 sm:p-10 md:p-12 transition-all duration-200 ${themeCardStyles}`}
+          className={`p-4 sm:p-10 md:p-12 transition-all duration-200 overflow-hidden ${themeCardStyles}`}
         >
           {/* Reader Top Toolbar */}
           <div className="mb-6 sm:mb-8 print:hidden">
@@ -400,6 +414,7 @@ export function PublicNoteViewer({
               onOpenToc={() => setIsTocOpen(true)}
               onCopyText={handleCopyText}
               onShare={handleShare}
+              onExportMarkdown={handleExportMarkdown}
               isCopied={isCopied}
               isFullscreen={isFullscreen}
               onToggleFullscreen={handleToggleFullscreen}
@@ -513,12 +528,12 @@ export function PublicNoteViewer({
             /* Note Content Area */
             <div
               ref={contentAreaRef}
-              className={`tiptap transition-all duration-150 ${fontClasses} ${fontSizeClasses} ${lineHeightClasses}`}
+              className={`tiptap transition-all duration-150 ${fontClasses} ${fontSizeClasses} ${lineHeightClasses} max-w-full overflow-hidden`}
             >
               {editor && (!editor.isEmpty || content) ? (
                 <EditorContent
                   editor={editor}
-                  className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[250px]"
+                  className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[250px] [&_.tableWrapper]:overflow-x-auto [&_.tableWrapper]:max-w-full [&_.tableWrapper]:block [&_.tableWrapper]:my-4 [&_.tableWrapper]:pb-2 [&_.tableWrapper]:touch-pan-x"
                 />
               ) : (
                 <div className="py-12 text-center">

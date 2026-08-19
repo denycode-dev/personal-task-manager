@@ -165,3 +165,216 @@ export function extractTableOfContents(content: unknown): TocItem[] {
   traverse(jsonContent);
   return items;
 }
+
+interface MarkNode {
+  type: string;
+  attrs?: Record<string, unknown>;
+}
+
+interface TiptapNode {
+  type?: string;
+  text?: string;
+  attrs?: Record<string, unknown>;
+  content?: TiptapNode[];
+  marks?: MarkNode[];
+}
+
+function renderTextWithMarks(node: TiptapNode): string {
+  let text = node.text || "";
+  if (!node.marks || node.marks.length === 0) return text;
+
+  for (const mark of node.marks) {
+    switch (mark.type) {
+      case "bold":
+        text = `**${text}**`;
+        break;
+      case "italic":
+        text = `*${text}*`;
+        break;
+      case "strike":
+        text = `~~${text}~~`;
+        break;
+      case "code":
+        text = `\`${text}\``;
+        break;
+      case "underline":
+        text = `<u>${text}</u>`;
+        break;
+      case "link": {
+        const href = mark.attrs?.href ? String(mark.attrs.href) : "#";
+        text = `[${text}](${href})`;
+        break;
+      }
+    }
+  }
+  return text;
+}
+
+function renderNodeToMarkdown(node: TiptapNode, listDepth = 0): string {
+  if (!node) return "";
+
+  if (node.type === "text") {
+    return renderTextWithMarks(node);
+  }
+
+  const childrenText = (node.content || [])
+    .map((child) => renderNodeToMarkdown(child, listDepth))
+    .join("");
+
+  switch (node.type) {
+    case "doc":
+      return childrenText;
+
+    case "paragraph":
+      return childrenText ? `${childrenText}\n\n` : "\n";
+
+    case "heading": {
+      const level = typeof node.attrs?.level === "number" ? node.attrs.level : 1;
+      const prefix = "#".repeat(Math.min(6, Math.max(1, level)));
+      return `${prefix} ${childrenText.trim()}\n\n`;
+    }
+
+    case "bulletList": {
+      const listItems = (node.content || [])
+        .map((li) => {
+          const itemText = (li.content || [])
+            .map((c) => renderNodeToMarkdown(c, listDepth + 1).trim())
+            .filter(Boolean)
+            .join(" ");
+          const indent = "  ".repeat(listDepth);
+          return `${indent}- ${itemText}`;
+        })
+        .join("\n");
+      return `${listItems}\n\n`;
+    }
+
+    case "orderedList": {
+      const start = typeof node.attrs?.start === "number" ? node.attrs.start : 1;
+      const listItems = (node.content || [])
+        .map((li, idx) => {
+          const itemText = (li.content || [])
+            .map((c) => renderNodeToMarkdown(c, listDepth + 1).trim())
+            .filter(Boolean)
+            .join(" ");
+          const indent = "  ".repeat(listDepth);
+          return `${indent}${start + idx}. ${itemText}`;
+        })
+        .join("\n");
+      return `${listItems}\n\n`;
+    }
+
+    case "blockquote": {
+      const lines = childrenText.trim().split("\n");
+      const quoted = lines.map((line) => `> ${line}`).join("\n");
+      return `${quoted}\n\n`;
+    }
+
+    case "codeBlock": {
+      const lang = node.attrs?.language ? String(node.attrs.language) : "";
+      const code = (node.content || []).map((c) => c.text || "").join("");
+      return `\`\`\`${lang}\n${code}\n\`\`\`\n\n`;
+    }
+
+    case "image": {
+      const src = node.attrs?.src ? String(node.attrs.src) : "";
+      const alt = node.attrs?.alt ? String(node.attrs.alt) : "";
+      return `![${alt}](${src})\n\n`;
+    }
+
+    case "horizontalRule":
+      return "---\n\n";
+
+    case "hardBreak":
+      return "  \n";
+
+    case "table": {
+      const rows = node.content || [];
+      if (rows.length === 0) return "";
+
+      const tableLines: string[] = [];
+      let isFirstRow = true;
+
+      for (const row of rows) {
+        const cells = row.content || [];
+        const cellTexts = cells.map((cell) =>
+          (cell.content || [])
+            .map((c) => renderNodeToMarkdown(c).trim())
+            .join(" ")
+            .replace(/\|/g, "\\|")
+            .replace(/\n+/g, " ")
+        );
+
+        tableLines.push(`| ${cellTexts.join(" | ")} |`);
+
+        if (isFirstRow) {
+          const dividers = cells.map(() => "---");
+          tableLines.push(`| ${dividers.join(" | ")} |`);
+          isFirstRow = false;
+        }
+      }
+
+      return `${tableLines.join("\n")}\n\n`;
+    }
+
+    default:
+      return childrenText;
+  }
+}
+
+/**
+ * Converts a note title and Tiptap content into a full formatted Markdown string.
+ */
+export function convertToMarkdown(
+  title: string,
+  content: unknown,
+  updatedAt?: Date
+): string {
+  let bodyMarkdown = "";
+
+  if (typeof content === "string") {
+    try {
+      const parsed = JSON.parse(content) as TiptapNode;
+      bodyMarkdown = renderNodeToMarkdown(parsed);
+    } catch {
+      bodyMarkdown = content;
+    }
+  } else if (content && typeof content === "object") {
+    bodyMarkdown = renderNodeToMarkdown(content as TiptapNode);
+  }
+
+  const cleanTitle = (title || "Catatan Tanpa Judul").trim();
+  const dateStr = updatedAt
+    ? new Date(updatedAt).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : new Date().toLocaleDateString("id-ID");
+
+  const header = `# ${cleanTitle}\n\n> 📅 Terakhir diperbarui: ${dateStr}\n> 📝 Denycode Task Manager\n\n---\n\n`;
+
+  return `${header}${bodyMarkdown.trim()}\n`;
+}
+
+/**
+ * Initiates a browser download of the note as a .md file.
+ */
+export function downloadMarkdownFile(
+  title: string,
+  content: unknown,
+  updatedAt?: Date
+): void {
+  const mdString = convertToMarkdown(title, content, updatedAt);
+  const blob = new Blob([mdString], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  const sanitizedFilename = slugify(title) || "catatan";
+  link.href = url;
+  link.download = `${sanitizedFilename}.md`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+

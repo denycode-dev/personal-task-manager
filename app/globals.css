@@ -106,8 +106,10 @@
   padding: 1rem 1.25rem;
   border: 2px solid black;
   overflow-x: auto;
+  max-width: 100%;
   margin: 0.75rem 0;
   border-radius: 0;
+  -webkit-overflow-scrolling: touch;
 }
 .tiptap pre code {
   background: none;
@@ -116,20 +118,52 @@
   color: inherit;
   font-size: inherit;
 }
-/* Table */
+/* Responsive Image */
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1rem auto;
+  border: 2px solid black;
+}
+/* Responsive Table container & styling */
+.tiptap .tableWrapper {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 1rem 0;
+  padding-bottom: 0.5rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  display: block;
+}
+
 .tiptap table {
   border-collapse: collapse;
   width: 100%;
-  margin: 0.75rem 0;
-  overflow: hidden;
+  min-width: 480px;
+  margin: 0;
+  table-layout: auto;
 }
+
+/* If table is rendered without tableWrapper */
+.tiptap > table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  margin: 1rem 0;
+  padding-bottom: 0.5rem;
+}
+
 .tiptap th,
 .tiptap td {
   border: 2px solid black;
   padding: 0.5rem 0.75rem;
-  min-width: 80px;
+  min-width: 90px;
   vertical-align: top;
   position: relative;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 .tiptap th {
   background: #FFD500;
@@ -152,6 +186,18 @@
   background: #FFD500;
   cursor: col-resize;
   z-index: 20;
+}
+
+@media (max-width: 640px) {
+  .tiptap table {
+    min-width: 420px;
+    font-size: 0.85em;
+  }
+  .tiptap th,
+  .tiptap td {
+    padding: 0.4rem 0.5rem;
+    min-width: 75px;
+  }
 }
 
 @theme inline {

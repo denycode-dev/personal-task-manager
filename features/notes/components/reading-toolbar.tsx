@@ -17,6 +17,8 @@ import {
   EyeSlash,
   SlidersHorizontal,
   ArrowsHorizontal,
+  MarkdownLogo,
+  DownloadSimple,
 } from "@phosphor-icons/react";
 import type { ReaderPreferences } from "@/features/notes/utils/reading-utils";
 
@@ -27,6 +29,7 @@ interface ReadingToolbarProps {
   onOpenToc: () => void;
   onCopyText: () => void;
   onShare: () => void;
+  onExportMarkdown: () => void;
   isCopied: boolean;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
@@ -39,6 +42,7 @@ export function ReadingToolbar({
   onOpenToc,
   onCopyText,
   onShare,
+  onExportMarkdown,
   isCopied,
   isFullscreen,
   onToggleFullscreen,
@@ -152,10 +156,19 @@ export function ReadingToolbar({
             <span className="hidden sm:inline">Tampilan</span>
           </button>
 
+          {/* Export Markdown */}
+          <button
+            onClick={onExportMarkdown}
+            title="Ekspor catatan ke file Markdown (.md)"
+            className="p-1.5 text-black bg-white hover:bg-yellow-300 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all flex items-center gap-1"
+          >
+            <MarkdownLogo size={16} weight="bold" />
+          </button>
+
           {/* Copy Text */}
           <button
             onClick={onCopyText}
-            title="Salin isi catatan"
+            title="Salin teks isi catatan"
             className="p-1.5 text-black bg-white hover:bg-yellow-300 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
           >
             {isCopied ? (
@@ -377,6 +390,36 @@ export function ReadingToolbar({
                 }`}
               >
                 Renggang
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Document Export Section */}
+          <div className="space-y-1.5 pt-2 border-t-2 border-neutral-100">
+            <label className="text-[11px] font-bold text-black flex items-center gap-1">
+              <DownloadSimple size={14} weight="bold" />
+              Ekspor Dokumen
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={() => {
+                  onExportMarkdown();
+                  setIsSettingsOpen(false);
+                }}
+                className="py-1.5 px-2 text-xs font-bold bg-neutral-50 hover:bg-yellow-300 text-black border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-1 transition-all"
+              >
+                <MarkdownLogo size={14} weight="bold" />
+                <span>File .MD</span>
+              </button>
+              <button
+                onClick={() => {
+                  handlePrint();
+                  setIsSettingsOpen(false);
+                }}
+                className="py-1.5 px-2 text-xs font-bold bg-neutral-50 hover:bg-yellow-300 text-black border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-1 transition-all"
+              >
+                <Printer size={14} weight="bold" />
+                <span>Cetak / PDF</span>
               </button>
             </div>
           </div>
