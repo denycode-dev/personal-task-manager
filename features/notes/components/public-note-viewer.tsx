@@ -381,7 +381,7 @@ export function PublicNoteViewer({
 
       {/* 3. Main Reader Area */}
       <main
-        className={`mx-auto px-2 sm:px-6 py-4 sm:py-10 transition-all duration-200 ${widthClasses} max-w-full`}
+        className={`mx-auto px-2 sm:px-6 py-3 sm:py-8 transition-all duration-200 ${widthClasses} max-w-full`}
       >
         {/* Floating Focus Mode Banner */}
         {preferences.focusMode && (
@@ -393,7 +393,7 @@ export function PublicNoteViewer({
               </span>
               <button
                 onClick={() => handleUpdatePreferences({ focusMode: false })}
-                className="px-2.5 py-1 bg-yellow-400 hover:bg-yellow-300 text-black text-[11px] font-black border border-black transition-colors"
+                className="px-2.5 py-1 bg-yellow-400 hover:bg-yellow-300 text-black text-[11px] font-black border border-black transition-colors cursor-pointer"
               >
                 Keluar (ESC)
               </button>
@@ -401,26 +401,32 @@ export function PublicNoteViewer({
           </div>
         )}
 
+        {/* Sticky Reader Toolbar */}
+        <div
+          className={`sticky z-20 print:hidden transition-all duration-200 mb-3 sm:mb-4 ${
+            preferences.focusMode
+              ? "top-2 sm:top-4"
+              : "top-[53px] sm:top-[60px]"
+          }`}
+        >
+          <ReadingToolbar
+            preferences={preferences}
+            onUpdatePreferences={handleUpdatePreferences}
+            tocCount={tocItems.length}
+            onOpenToc={() => setIsTocOpen(true)}
+            onCopyText={handleCopyText}
+            onShare={handleShare}
+            onExportMarkdown={handleExportMarkdown}
+            isCopied={isCopied}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={handleToggleFullscreen}
+          />
+        </div>
+
         {/* Reader Container Card */}
         <div
           className={`p-4 sm:p-10 md:p-12 transition-all duration-200 overflow-hidden ${themeCardStyles}`}
         >
-          {/* Reader Top Toolbar */}
-          <div className="mb-6 sm:mb-8 print:hidden">
-            <ReadingToolbar
-              preferences={preferences}
-              onUpdatePreferences={handleUpdatePreferences}
-              tocCount={tocItems.length}
-              onOpenToc={() => setIsTocOpen(true)}
-              onCopyText={handleCopyText}
-              onShare={handleShare}
-              onExportMarkdown={handleExportMarkdown}
-              isCopied={isCopied}
-              isFullscreen={isFullscreen}
-              onToggleFullscreen={handleToggleFullscreen}
-            />
-          </div>
-
           {/* Title & Reading Meta Header */}
           <div className="border-b-2 border-current/20 pb-6 mb-6 sm:mb-8 space-y-4">
             <h1
