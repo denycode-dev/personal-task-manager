@@ -3,6 +3,8 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { noteService } from "@/features/notes/services/note.service";
 import { folderRepository } from "@/features/folders/repositories/folder.repository";
+import { deleteNoteAction } from "@/features/notes/actions/delete-note.action";
+import { DeleteConfirmButton } from "@/components/ui/delete-confirm-button";
 import { db } from "@/lib/db";
 import { noteLocks, noteShares } from "@/lib/db/schema";
 import { inArray } from "drizzle-orm";
@@ -104,10 +106,9 @@ export default async function NotesPage({
             const isShared = sharedSet.has(note.id);
 
             return (
-              <Link
+              <div
                 key={note.id}
-                href={`/notes/${note.id}`}
-                className="group flex flex-col justify-between p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
+                className="group relative flex flex-col justify-between p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
@@ -138,12 +139,22 @@ export default async function NotesPage({
                           Publik
                         </span>
                       )}
+                      <DeleteConfirmButton
+                        action={deleteNoteAction.bind(null, note.id)}
+                        confirmTitle="Hapus Catatan"
+                        confirmMessage={`Hapus catatan "${note.title || "Catatan tanpa judul"}"? Tindakan ini akan menghapus catatan secara permanen.`}
+                        successMessage="Catatan berhasil dihapus."
+                        className="p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors disabled:opacity-50 inline-flex items-center justify-center cursor-pointer"
+                        iconSize={14}
+                      />
                     </div>
                   </div>
 
-                  <h2 className="font-bold text-base text-black truncate group-hover:underline decoration-2">
-                    {note.title || "Catatan tanpa judul"}
-                  </h2>
+                  <Link href={`/notes/${note.id}`} className="block">
+                    <h2 className="font-bold text-base text-black truncate group-hover:underline decoration-2">
+                      {note.title || "Catatan tanpa judul"}
+                    </h2>
+                  </Link>
                 </div>
 
                 <div className="mt-4 pt-2.5 border-t border-black/10 flex items-center justify-between text-[11px] text-muted-foreground font-medium">
@@ -154,11 +165,14 @@ export default async function NotesPage({
                       year: "numeric",
                     })}
                   </span>
-                  <span className="text-black font-bold group-hover:translate-x-0.5 transition-transform">
+                  <Link
+                    href={`/notes/${note.id}`}
+                    className="text-black font-bold group-hover:translate-x-0.5 transition-transform"
+                  >
                     Buka &rarr;
-                  </span>
+                  </Link>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

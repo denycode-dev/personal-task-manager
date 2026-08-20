@@ -33,9 +33,13 @@ export async function updateBoardFolderAction(
   }
 }
 
-export async function deleteBoardAction(id: string): Promise<void> {
+export async function deleteBoardAction(id: string, redirectTo?: string): Promise<void> {
   await requireAuth();
   await boardService.delete(id);
   revalidatePath("/kanban");
-  redirect("/kanban");
+  revalidatePath("/folders");
+  revalidatePath("/dashboard");
+  if (redirectTo) {
+    redirect(redirectTo);
+  }
 }

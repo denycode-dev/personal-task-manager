@@ -57,7 +57,8 @@ export default async function ChecklistDetailPage({
           />
 
           <DeleteConfirmButton
-            action={deleteChecklistAction.bind(null, id)}
+            action={deleteChecklistAction.bind(null, id, "/checklists")}
+            confirmTitle="Hapus Checklist"
             confirmMessage={`Hapus checklist "${checklist.title}"? Semua item di dalamnya akan terhapus.`}
           />
         </div>

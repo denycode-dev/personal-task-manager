@@ -29,11 +29,15 @@ export async function updateChecklistFolderAction(
   }
 }
 
-export async function deleteChecklistAction(id: string): Promise<void> {
+export async function deleteChecklistAction(id: string, redirectTo?: string): Promise<void> {
   await requireAuth();
   await checklistService.delete(id);
   revalidatePath("/checklists");
-  redirect("/checklists");
+  revalidatePath("/folders");
+  revalidatePath("/dashboard");
+  if (redirectTo) {
+    redirect(redirectTo);
+  }
 }
 
 export async function addChecklistItemAction(checklistId: string, content: string, deadline?: string): Promise<ActionResult<ChecklistItem>> {

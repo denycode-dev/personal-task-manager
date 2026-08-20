@@ -57,7 +57,7 @@ export default async function KanbanBoardPage({
           />
 
           <DeleteConfirmButton
-            action={deleteBoardAction.bind(null, boardId)}
+            action={deleteBoardAction.bind(null, boardId, "/kanban")}
             confirmTitle="Hapus Papan Kanban"
             confirmMessage={`Hapus papan kanban "${board.title}"? Semua kolom dan kartu di dalamnya akan ikut terhapus.`}
           />

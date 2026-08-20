@@ -3,6 +3,8 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { checklistRepository } from "@/features/checklists/repositories/checklist.repository";
 import { folderRepository } from "@/features/folders/repositories/folder.repository";
+import { deleteChecklistAction } from "@/features/checklists/actions/checklist.action";
+import { DeleteConfirmButton } from "@/components/ui/delete-confirm-button";
 import { CreateChecklistForm } from "@/features/checklists/components/create-checklist-form";
 import { CheckSquareOffset, ArrowRight, ListChecks } from "@phosphor-icons/react/dist/ssr";
 
@@ -76,45 +78,57 @@ export default async function ChecklistsPage({
           {checklists.map((cl) => {
             const folder = folders.find((f) => f.id === cl.folderId);
             return (
-              <li key={cl.id}>
-                <Link
-                  href={`/checklists/${cl.id}`}
-                  className="group flex items-center justify-between p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="p-2 bg-emerald-300 border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-emerald-950 shrink-0">
-                      <CheckSquareOffset size={20} weight="fill" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-base text-black truncate group-hover:underline decoration-2">
-                          {cl.title}
-                        </p>
-                        {folder ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-neutral-700 bg-neutral-100 px-1.5 py-0.5 border border-black/20 shrink-0">
-                            <span
-                              className="inline-block w-2 h-2 rounded-xs border border-black"
-                              style={{ backgroundColor: folder.color }}
-                            />
-                            <span className="truncate max-w-[100px]">{folder.name}</span>
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Dibuat {new Date(cl.createdAt).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
+              <li
+                key={cl.id}
+                className="group relative flex items-center justify-between p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all gap-4"
+              >
+                <Link href={`/checklists/${cl.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="p-2 bg-emerald-300 border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-emerald-950 shrink-0">
+                    <CheckSquareOffset size={20} weight="fill" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-base text-black truncate group-hover:underline decoration-2">
+                        {cl.title}
                       </p>
+                      {folder ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-neutral-700 bg-neutral-100 px-1.5 py-0.5 border border-black/20 shrink-0">
+                          <span
+                            className="inline-block w-2 h-2 rounded-xs border border-black"
+                            style={{ backgroundColor: folder.color }}
+                          />
+                          <span className="truncate max-w-[100px]">{folder.name}</span>
+                        </span>
+                      ) : null}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Dibuat {new Date(cl.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
                   </div>
+                </Link>
 
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-black group-hover:translate-x-0.5 transition-transform shrink-0">
+                <div className="flex items-center gap-3 shrink-0">
+                  <Link
+                    href={`/checklists/${cl.id}`}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-black group-hover:translate-x-0.5 transition-transform"
+                  >
                     <span>Lihat Item</span>
                     <ArrowRight size={14} weight="bold" />
-                  </span>
-                </Link>
+                  </Link>
+
+                  <DeleteConfirmButton
+                    action={deleteChecklistAction.bind(null, cl.id)}
+                    confirmTitle="Hapus Checklist"
+                    confirmMessage={`Hapus checklist "${cl.title}"? Semua item di dalamnya akan ikut terhapus.`}
+                    successMessage="Checklist berhasil dihapus."
+                    className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors disabled:opacity-50 inline-flex items-center justify-center cursor-pointer"
+                    iconSize={15}
+                  />
+                </div>
               </li>
             );
           })}

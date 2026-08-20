@@ -3,8 +3,10 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { boardService } from "@/features/kanban/services/board.service";
 import { folderRepository } from "@/features/folders/repositories/folder.repository";
+import { deleteBoardAction } from "@/features/kanban/actions/board.action";
+import { DeleteConfirmButton } from "@/components/ui/delete-confirm-button";
 import { CreateBoardForm } from "@/features/kanban/components/create-board-form";
-import { Kanban, Plus, Layout, ArrowRight } from "@phosphor-icons/react/dist/ssr";
+import { Kanban, Layout, ArrowRight } from "@phosphor-icons/react/dist/ssr";
 
 export default async function KanbanPage({
   searchParams,
@@ -76,21 +78,29 @@ export default async function KanbanPage({
           {boards.map((board) => {
             const folder = folders.find((f) => f.id === board.folderId);
             return (
-              <Link
+              <div
                 key={board.id}
-                href={`/kanban/${board.id}`}
-                className="group flex flex-col justify-between p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
+                className="group relative flex flex-col justify-between p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
+                    <Link href={`/kanban/${board.id}`} className="flex items-center gap-2 min-w-0 flex-1">
                       <span className="p-1.5 bg-blue-200 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-blue-900 shrink-0">
                         <Kanban size={18} weight="bold" />
                       </span>
                       <h2 className="font-bold text-base text-black truncate group-hover:underline decoration-2">
                         {board.title}
                       </h2>
-                    </div>
+                    </Link>
+
+                    <DeleteConfirmButton
+                      action={deleteBoardAction.bind(null, board.id)}
+                      confirmTitle="Hapus Papan Kanban"
+                      confirmMessage={`Hapus papan kanban "${board.title}"? Semua kolom dan kartu di dalamnya akan ikut terhapus.`}
+                      successMessage="Papan kanban berhasil dihapus."
+                      className="p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors disabled:opacity-50 inline-flex items-center justify-center cursor-pointer shrink-0"
+                      iconSize={14}
+                    />
                   </div>
 
                   {folder ? (
@@ -116,12 +126,15 @@ export default async function KanbanPage({
                       year: "numeric",
                     })}
                   </span>
-                  <span className="inline-flex items-center gap-1 text-black font-bold group-hover:translate-x-0.5 transition-transform">
+                  <Link
+                    href={`/kanban/${board.id}`}
+                    className="inline-flex items-center gap-1 text-black font-bold group-hover:translate-x-0.5 transition-transform"
+                  >
                     <span>Buka Papan</span>
                     <ArrowRight size={12} weight="bold" />
-                  </span>
+                  </Link>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

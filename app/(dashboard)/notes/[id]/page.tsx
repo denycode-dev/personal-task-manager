@@ -91,7 +91,7 @@ export default async function NotePage({ params }: NotePageProps) {
           />
 
           <DeleteConfirmButton
-            action={deleteNoteAction.bind(null, id)}
+            action={deleteNoteAction.bind(null, id, "/notes")}
             confirmTitle="Hapus Catatan"
             confirmMessage={`Hapus catatan "${note.title}"? Tindakan ini akan menghapus catatan secara permanen.`}
           />
