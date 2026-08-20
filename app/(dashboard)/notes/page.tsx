@@ -38,16 +38,18 @@ export default async function NotesPage({
   const sharedSet = new Set(sharedRows.map((r) => r.noteId));
 
   const enrichedNotes: EnrichedNote[] = notes.map((note) => {
-    const rawSnippet = extractPlainText(note.content);
+    const isLocked = lockedSet.has(note.id);
+    const rawSnippet = isLocked ? "" : extractPlainText(note.content);
     // Normalize newlines and excess whitespace into a single clean preview line/paragraph
     const snippet = rawSnippet.replace(/\s+/g, " ").trim();
     return {
       ...note,
-      isLocked: lockedSet.has(note.id),
+      isLocked,
       isShared: sharedSet.has(note.id),
       snippet,
     };
   });
+
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">

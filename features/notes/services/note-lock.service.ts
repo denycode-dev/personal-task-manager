@@ -1,8 +1,12 @@
 import { noteRepository } from "@/features/notes/repositories/note.repository";
 import { noteLockRepository } from "@/features/notes/repositories/note-lock.repository";
 import { envelopeEncrypt, envelopeDecrypt } from "@/lib/encryption/envelope";
-import { hashPassword, comparePassword } from "@/lib/auth/password";
+import { hashPassword, comparePassword, safeEqual } from "@/lib/auth/password";
+import { checkRateLimit, resetRateLimit } from "@/lib/auth/rate-limit";
 import { NotFoundError } from "@/lib/errors";
+
+const UNLOCK_MAX_ATTEMPTS = 5;
+const UNLOCK_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
 export const noteLockService = {
   async getLockStatus(noteId: string): Promise<{ isLocked: boolean }> {
@@ -51,6 +55,21 @@ export const noteLockService = {
     noteId: string,
     password: string
   ): Promise<{ success: boolean; content?: unknown; error?: string }> {
+    const rateLimitKey = `unlock:${noteId}`;
+    const { allowed, retryAfterMs } = checkRateLimit(
+      rateLimitKey,
+      UNLOCK_MAX_ATTEMPTS,
+      UNLOCK_WINDOW_MS
+    );
+
+    if (!allowed) {
+      const minutes = Math.ceil(retryAfterMs / 60000);
+      return {
+        success: false,
+        error: `Terlalu banyak percobaan kata sandi. Coba lagi dalam ${minutes} menit.`,
+      };
+    }
+
     const lock = await noteLockRepository.findByNoteId(noteId);
     if (!lock) {
       return { success: false, error: "Catatan tidak terkunci." };
@@ -60,6 +79,9 @@ export const noteLockService = {
     if (!isValid) {
       return { success: false, error: "Password salah. Silakan coba lagi." };
     }
+
+    // Reset rate limit counter on successful verification
+    resetRateLimit(rateLimitKey);
 
     try {
       const plaintext = envelopeDecrypt({
@@ -142,6 +164,9 @@ export const noteLockService = {
       await noteRepository.update(noteId, { content });
       await noteLockRepository.delete(noteId);
 
+      // Reset any active rate limit counters for this note
+      resetRateLimit(`unlock:${noteId}`);
+
       return { success: true };
     } catch (err) {
       console.error("[NoteLockService] Decryption during remove lock failed:", err);
@@ -154,12 +179,24 @@ export const noteLockService = {
     appPasswordInput: string,
     newNotePassword: string
   ): Promise<{ success: boolean; error?: string }> {
+    const rateLimitKey = `reset_lock:${noteId}`;
+    const { allowed, retryAfterMs } = checkRateLimit(rateLimitKey, 5, 5 * 60 * 1000);
+    if (!allowed) {
+      const minutes = Math.ceil(retryAfterMs / 60000);
+      return {
+        success: false,
+        error: `Terlalu banyak percobaan reset. Coba lagi dalam ${minutes} menit.`,
+      };
+    }
+
     const lock = await noteLockRepository.findByNoteId(noteId);
     if (!lock) {
       return { success: false, error: "Catatan tidak dalam status terkunci." };
     }
 
-    if (appPasswordInput !== process.env.APP_PASSWORD) {
+    // Safe constant-time comparison against app password to avoid timing attacks
+    const isAppPasswordValid = safeEqual(appPasswordInput, process.env.APP_PASSWORD);
+    if (!isAppPasswordValid) {
       return { success: false, error: "Password aplikasi salah. Otorisasi reset ditolak." };
     }
 
@@ -170,6 +207,11 @@ export const noteLockService = {
     const newHash = await hashPassword(newNotePassword);
     await noteLockRepository.updatePasswordHash(noteId, newHash);
 
+    // Reset rate limits on successful password reset
+    resetRateLimit(rateLimitKey);
+    resetRateLimit(`unlock:${noteId}`);
+
     return { success: true };
   },
 };
+

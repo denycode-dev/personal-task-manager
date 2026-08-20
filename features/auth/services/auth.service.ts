@@ -1,4 +1,4 @@
-import { comparePassword } from "@/lib/auth/password";
+import { safeEqual } from "@/lib/auth/password";
 import { checkRateLimit, resetRateLimit } from "@/lib/auth/rate-limit";
 
 const RATE_LIMIT_KEY = "login";
@@ -19,9 +19,17 @@ export async function login(password: string): Promise<LoginResult> {
     };
   }
 
-  const appPassword = process.env.APP_PASSWORD!;
-  // Direct comparison for simple app password (not hashed in env)
-  const isValid = password === appPassword;
+  const appPassword = process.env.APP_PASSWORD;
+  if (!appPassword) {
+    console.error("[AuthService] APP_PASSWORD environment variable is not defined.");
+    return {
+      success: false,
+      error: "Konfigurasi server bermasalah. APP_PASSWORD belum disetel di environment.",
+    };
+  }
+
+  // Constant-time comparison to prevent timing side-channel attacks
+  const isValid = safeEqual(password, appPassword);
 
   if (!isValid) {
     return { success: false, error: "Password salah. Silakan coba lagi." };

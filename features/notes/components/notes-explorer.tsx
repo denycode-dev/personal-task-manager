@@ -538,7 +538,20 @@ export function NotesExplorer({
                     </h2>
                   </Link>
 
-                  {note.snippet ? (
+                  {note.isLocked ? (
+                    <div className="relative mt-2 p-2 bg-neutral-100/90 border border-black/10 overflow-hidden select-none">
+                      <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed filter blur-[4px] select-none pointer-events-none opacity-40">
+                        {note.snippet ||
+                          "Konten catatan ini terenkripsi aman dengan AES-256-GCM. Buka catatan dan masukkan password untuk membaca isinya."}
+                      </p>
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-neutral-900 bg-yellow-300 px-2 py-0.5 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                          <Lock size={10} weight="fill" />
+                          Deskripsi Terkunci
+                        </span>
+                      </div>
+                    </div>
+                  ) : note.snippet ? (
                     <p className="mt-1.5 text-xs text-neutral-600 line-clamp-2 leading-relaxed">
                       {note.snippet}
                     </p>
@@ -618,13 +631,24 @@ export function NotesExplorer({
                           </span>
                         )}
                       </div>
-                      {note.snippet && (
+                      {note.isLocked ? (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-xs text-neutral-500 truncate max-w-xs sm:max-w-md filter blur-[3px] select-none pointer-events-none opacity-40">
+                            {note.snippet || "Konten terenkripsi aman dengan proteksi password."}
+                          </p>
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-neutral-700 bg-neutral-100 px-1.5 py-0.2 border border-black/20 shrink-0">
+                            <Lock size={9} weight="fill" />
+                            Terkunci
+                          </span>
+                        </div>
+                      ) : note.snippet ? (
                         <p className="text-xs text-muted-foreground truncate max-w-lg mt-0.5">
                           {note.snippet}
                         </p>
-                      )}
+                      ) : null}
                     </div>
                   </Link>
+
 
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-black/5">
                     {folder ? (

@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuth, getSession } from "@/lib/auth/session";
 import { noteLockService } from "@/features/notes/services/note-lock.service";
+import { noteShareRepository } from "@/features/notes/repositories/note-share.repository";
 import type { ActionResult } from "@/types/api";
 
 export async function lockNoteAction(
@@ -31,7 +32,18 @@ export async function unlockNoteAction(
   noteId: string,
   password: string
 ): Promise<ActionResult<{ content: unknown }>> {
-  // Can be called by authenticated dashboard user or public reader verification
+  // Authorization check: User must either have an active session or the note must be publicly shared
+  const session = await getSession();
+  if (!session) {
+    const share = await noteShareRepository.findByNoteId(noteId);
+    if (!share) {
+      return {
+        success: false,
+        error: "Akses ditolak. Catatan ini bersifat privat dan memerlukan autentikasi.",
+      };
+    }
+  }
+
   const result = await noteLockService.verifyAndDecrypt(noteId, password);
   if (!result.success) {
     return { success: false, error: result.error ?? "Password salah." };
@@ -39,6 +51,7 @@ export async function unlockNoteAction(
 
   return { success: true, data: { content: result.content } };
 }
+
 
 export async function saveLockedNoteAction(
   noteId: string,
