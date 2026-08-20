@@ -20,4 +20,7 @@ export const columnService = {
   async delete(id: string): Promise<void> {
     await columnRepository.delete(id);
   },
+  async reorder(items: { id: string; position: number }[]): Promise<void> {
+    await columnRepository.bulkUpdatePositions(items);
+  },
 };

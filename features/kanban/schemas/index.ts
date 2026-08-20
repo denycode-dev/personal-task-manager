@@ -30,7 +30,17 @@ export const reorderSchema = z.object({
   ),
 });
 
+export const reorderColumnsSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string().uuid(),
+      position: z.number().int().min(0),
+    })
+  ),
+});
+
 export type CreateBoardInput = z.infer<typeof createBoardSchema>;
 export type CreateColumnInput = z.infer<typeof createColumnSchema>;
 export type CreateCardInput = z.infer<typeof createCardSchema>;
 export type ReorderInput = z.infer<typeof reorderSchema>;
+export type ReorderColumnsInput = z.infer<typeof reorderColumnsSchema>;

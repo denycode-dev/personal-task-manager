@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Plus, Trash, DotsSixVertical, ArrowRight, CircleNotch } from "@phosphor-icons/react";
 import type { KanbanBoard, KanbanCard, KanbanColumn } from "@/lib/db/schema";
 import { createCardAction, reorderCardsAction } from "@/features/kanban/actions/card.action";
-import { createColumnAction, deleteColumnAction } from "@/features/kanban/actions/column.action";
+import { createColumnAction, deleteColumnAction, reorderColumnsAction } from "@/features/kanban/actions/column.action";
 import { DeadlineBadge } from "@/features/deadlines/components/deadline-badge";
 import { CardDetailDialog } from "@/features/kanban/components/card-detail-dialog";
 import { useConfirm } from "@/lib/hooks/use-confirm";
@@ -77,7 +77,14 @@ function KanbanColumnView({
 }) {
   const confirm = useConfirm();
   const [isPending, startTransition] = useTransition();
-  const { setNodeRef } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: `col-${column.id}`,
     data: { type: "column", column },
   });
@@ -99,21 +106,36 @@ function KanbanColumnView({
   return (
     <div
       ref={setNodeRef}
-      className="flex-shrink-0 w-72 bg-gray-50 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col max-h-[calc(100vh-10rem)]"
+      style={{
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.35 : 1,
+      }}
+      className="flex-shrink-0 w-72 bg-gray-50 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col max-h-[calc(100vh-10rem)] transition-shadow"
     >
       <div className="flex items-center justify-between px-3 py-2 border-b-2 border-black bg-white">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-sm">{column.name}</span>
-          <span className="text-xs bg-gray-100 border border-black px-1.5">{column.cards.length}</span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="text-muted-foreground hover:text-black flex-shrink-0 cursor-grab active:cursor-grabbing touch-none p-0.5 -m-0.5 rounded hover:bg-gray-100"
+            aria-label={`Geser posisi kolom ${column.name}`}
+            title="Geser posisi kolom"
+          >
+            <DotsSixVertical size={16} weight="bold" />
+          </button>
+          <span className="font-bold text-sm truncate">{column.name}</span>
+          <span className="text-xs bg-gray-100 border border-black px-1.5 flex-shrink-0">{column.cards.length}</span>
           {isFirst && (
-            <span className="text-[10px] bg-yellow-400 border border-black px-1 font-bold uppercase">MASUK</span>
+            <span className="text-[10px] bg-yellow-400 border border-black px-1 font-bold uppercase flex-shrink-0">MASUK</span>
           )}
         </div>
         <button
           suppressHydrationWarning
           onClick={handleDeleteColumn}
           disabled={isPending}
-          className="p-1 text-muted-foreground hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center justify-center"
+          className="p-1 text-muted-foreground hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center justify-center flex-shrink-0 ml-1"
           title="Hapus kolom"
         >
           {isPending ? (
@@ -154,6 +176,7 @@ function findColumn(id: string | null | undefined, cols: Column[]): Column | und
 export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; initialColumns: Column[] }) {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null);
+  const [activeColumn, setActiveColumn] = useState<Column | null>(null);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [addingCard, setAddingCard] = useState(false);
@@ -229,6 +252,10 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
   const onDragStart = ({ active }: DragStartEvent) => {
     if (active.data.current?.type === "card") {
       setActiveCard(active.data.current.card);
+      setActiveColumn(null);
+    } else if (active.data.current?.type === "column") {
+      setActiveColumn(active.data.current.column);
+      setActiveCard(null);
     }
   };
 
@@ -237,6 +264,8 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
     const activeId = String(active.id);
     const overId = String(over.id);
     if (activeId === overId) return;
+
+    if (active.data.current?.type === "column") return;
 
     const activeCol = findColumn(activeId, columns);
     const overCol = findColumn(overId, columns);
@@ -283,11 +312,41 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
   };
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
+    const isColumn = active.data.current?.type === "column";
     setActiveCard(null);
+    setActiveColumn(null);
     if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    if (isColumn) {
+      if (activeId !== overId) {
+        const activeColId = activeId.startsWith("col-") ? activeId.replace("col-", "") : activeId;
+        const overColId = overId.startsWith("col-") ? overId.replace("col-", "") : overId;
+
+        const oldIndex = columns.findIndex((c) => c.id === activeColId);
+        const newIndex = columns.findIndex((c) => c.id === overColId);
+
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          const nextColumns = arrayMove(columns, oldIndex, newIndex);
+          setColumns(nextColumns);
+
+          const items = nextColumns.map((col, pos) => ({
+            id: col.id,
+            position: pos,
+          }));
+
+          startTransition(async () => {
+            const result = await reorderColumnsAction(board.id, items);
+            if (result && !result.success) {
+              toast.error(result.error || "Gagal memperbarui urutan kolom.");
+            }
+          });
+        }
+      }
+      return;
+    }
 
     const activeCol = findColumn(activeId, columns);
     const overCol = findColumn(overId, columns);
@@ -481,6 +540,29 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
           </div>
         </div>
         <DragOverlay>
+          {activeColumn && (
+            <div className="flex-shrink-0 w-72 bg-gray-50 border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col max-h-[calc(100vh-10rem)] opacity-95 rotate-1 pointer-events-none">
+              <div className="flex items-center justify-between px-3 py-2 border-b-2 border-black bg-white">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-muted-foreground">
+                    <DotsSixVertical size={16} weight="bold" />
+                  </span>
+                  <span className="font-bold text-sm truncate">{activeColumn.name}</span>
+                  <span className="text-xs bg-gray-100 border border-black px-1.5 flex-shrink-0">{activeColumn.cards.length}</span>
+                </div>
+              </div>
+              <div className="p-2 space-y-2 max-h-48 overflow-hidden">
+                {activeColumn.cards.slice(0, 3).map((card) => (
+                  <div key={card.id} className="bg-white border-2 border-black p-2.5 text-xs font-medium truncate shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                    {card.title}
+                  </div>
+                ))}
+                {activeColumn.cards.length > 3 && (
+                  <p className="text-[10px] text-center text-muted-foreground font-semibold">+{activeColumn.cards.length - 3} kartu lainnya</p>
+                )}
+              </div>
+            </div>
+          )}
           {activeCard && (
             <div className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 rotate-2 w-72 opacity-95 pointer-events-none">
               <div className="flex items-start gap-2">

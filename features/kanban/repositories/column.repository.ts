@@ -19,4 +19,14 @@ export const columnRepository = {
   async delete(id: string): Promise<void> {
     await db.delete(kanbanColumns).where(eq(kanbanColumns.id, id));
   },
+  async bulkUpdatePositions(items: { id: string; position: number }[]): Promise<void> {
+    if (items.length === 0) return;
+    await Promise.all(
+      items.map(({ id, position }) =>
+        db.update(kanbanColumns)
+          .set({ position })
+          .where(eq(kanbanColumns.id, id))
+      )
+    );
+  },
 };
