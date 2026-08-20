@@ -100,7 +100,7 @@ export default async function NotePage({ params }: NotePageProps) {
 
       {/* Editor Canvas */}
       <div className="flex-1 overflow-hidden">
-        <NoteEditor note={note} isLocked={lockStatus.isLocked} />
+        <NoteEditor key={note.id} note={note} isLocked={lockStatus.isLocked} />
       </div>
     </div>
   );

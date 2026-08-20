@@ -20,5 +20,7 @@ export async function updateNoteAction(
 
   const note = await noteService.update(id, parsed.data);
   revalidatePath(`/notes/${id}`);
+  revalidatePath("/notes");
+  revalidatePath("/folders");
   return { success: true, data: note };
 }

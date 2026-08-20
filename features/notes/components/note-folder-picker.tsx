@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { updateNoteAction } from "@/features/notes/actions/update-note.action";
 import { useConfirm } from "@/lib/hooks/use-confirm";
 import { toast } from "sonner";
@@ -17,6 +17,10 @@ export function NoteFolderPicker({ noteId, currentFolderId, folders }: Props) {
   const [folderId, setFolderId] = useState(currentFolderId ?? "");
   const [isPending, startTransition] = useTransition();
   const confirm = useConfirm();
+
+  useEffect(() => {
+    setFolderId(currentFolderId ?? "");
+  }, [currentFolderId]);
 
   const handleChange = async (newId: string) => {
     const targetFolder = folders.find((f) => f.id === newId);

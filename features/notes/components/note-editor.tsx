@@ -13,7 +13,7 @@ import { updateNoteAction } from "@/features/notes/actions/update-note.action";
 import { unlockNoteAction, saveLockedNoteAction } from "@/features/notes/actions/lock-note.action";
 import { toast } from "sonner";
 import { AUTO_SAVE_DEBOUNCE_MS } from "@/config/app";
-import { Lock, Key, ArrowRight, ShieldCheck, CircleNotch } from "@phosphor-icons/react";
+import { Lock, Key, ShieldCheck, CircleNotch } from "@phosphor-icons/react";
 import type { Note } from "@/lib/db/schema";
 
 type Props = {
@@ -43,6 +43,9 @@ const editorExtensions = [
 export function NoteEditor({ note, isLocked = false }: Props) {
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   const [title, setTitle] = useState(note.title);
+  const titleRef = useRef(title);
+  titleRef.current = title;
+
   const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [unlockedContent, setUnlockedContent] = useState<unknown | null>(
     isLocked ? null : note.content
@@ -83,14 +86,16 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     extensions: editorExtensions,
     content: (unlockedContent as any) ?? "",
     onUpdate({ editor }) {
-      triggerSave(title, editor.getJSON());
+      triggerSave(titleRef.current, editor.getJSON());
     },
     immediatelyRender: false,
   });
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-    triggerSave(e.target.value, editor?.getJSON());
+    const newTitle = e.target.value;
+    setTitle(newTitle);
+    titleRef.current = newTitle;
+    triggerSave(newTitle, editor?.getJSON());
   };
 
   const handleUnlock = async (e: React.FormEvent) => {

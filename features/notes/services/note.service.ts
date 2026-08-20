@@ -26,7 +26,7 @@ export const noteService = {
     const existing = await noteRepository.findById(id);
     if (!existing) throw new NotFoundError("Catatan tidak ditemukan.");
     const updated = await noteRepository.update(id, {
-      ...(input.title && { title: input.title }),
+      ...(input.title !== undefined && { title: input.title }),
       ...(input.content !== undefined && { content: input.content }),
       ...(input.folderId !== undefined && { folderId: input.folderId }),
     });
