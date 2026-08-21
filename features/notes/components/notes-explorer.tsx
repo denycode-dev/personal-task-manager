@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, useTransition } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { Folder } from "@/lib/db/schema";
 import type {
   EnrichedNote,
@@ -29,8 +29,8 @@ import {
   ArrowRight,
   Funnel,
   ArrowsDownUp,
-  FolderSimple,
   DownloadSimple,
+  CalendarBlank,
 } from "@phosphor-icons/react";
 
 interface NotesExplorerProps {
@@ -52,7 +52,6 @@ export function NotesExplorer({
   initialStatus = "all",
   initialView = "grid",
 }: NotesExplorerProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -508,33 +507,34 @@ export function NotesExplorer({
             return (
               <div
                 key={note.id}
-                className="group relative flex flex-col justify-between p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
+                className="group relative flex flex-col justify-between h-full p-4 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-2">
+                  {/* Top Bar: Folder badge on left, Status badges + Action Buttons on right */}
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
                     {folder ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-neutral-700">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold text-neutral-800 bg-neutral-50 border border-black/30 rounded-xs">
                         <span
-                          className="inline-block w-2.5 h-2.5 rounded-sm border border-black"
+                          className="inline-block w-2.5 h-2.5 rounded-xs border border-black shrink-0"
                           style={{ backgroundColor: folder.color }}
                         />
-                        <span className="truncate max-w-[120px]">{folder.name}</span>
+                        <span className="truncate max-w-[110px]">{folder.name}</span>
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold text-neutral-400 uppercase">
+                      <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 border border-dashed border-neutral-300 rounded-xs">
                         Tanpa Folder
                       </span>
                     )}
 
                     <div className="flex items-center gap-1 shrink-0">
                       {note.isLocked && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-black uppercase bg-neutral-900 text-yellow-400 border border-black">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-black uppercase bg-neutral-900 text-yellow-400 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                           <Lock size={10} weight="fill" />
                           Kunci
                         </span>
                       )}
                       {note.isShared && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-black uppercase bg-purple-200 text-purple-900 border border-black">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-black uppercase bg-purple-200 text-purple-900 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                           <ShareNetwork size={10} weight="bold" />
                           Publik
                         </span>
@@ -552,10 +552,10 @@ export function NotesExplorer({
                             });
                             toast.success(`Catatan "${note.title || "Catatan"}" berhasil diekspor ke Markdown!`);
                           }}
-                          className="p-1 text-muted-foreground hover:text-black hover:bg-lime-200 border border-transparent hover:border-black rounded-xs transition-colors inline-flex items-center justify-center cursor-pointer"
+                          className="w-7 h-7 inline-flex items-center justify-center bg-white hover:bg-lime-200 text-neutral-800 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all rounded-xs cursor-pointer"
                           title="Ekspor catatan ini ke Markdown (.md)"
                         >
-                          <DownloadSimple size={14} weight="bold" />
+                          <DownloadSimple size={13} weight="bold" />
                         </button>
                       )}
                       <DeleteConfirmButton
@@ -563,44 +563,43 @@ export function NotesExplorer({
                         confirmTitle="Hapus Catatan"
                         confirmMessage={`Hapus catatan "${note.title || "Catatan tanpa judul"}"? Tindakan ini akan menghapus catatan secara permanen.`}
                         successMessage="Catatan berhasil dihapus."
-                        className="p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors disabled:opacity-50 inline-flex items-center justify-center cursor-pointer"
-                        iconSize={14}
+                        className="w-7 h-7 inline-flex items-center justify-center bg-white hover:bg-red-100 text-neutral-800 hover:text-red-600 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all rounded-xs cursor-pointer disabled:opacity-50"
+                        iconSize={13}
                       />
                     </div>
                   </div>
 
-                  <Link href={`/notes/${note.id}`} className="block">
-                    <h2 className="font-bold text-base text-black truncate group-hover:underline decoration-2">
+                  <Link href={`/notes/${note.id}`} className="block group/title">
+                    <h2 className="font-bold text-base text-black truncate group-hover/title:underline decoration-2">
                       {note.title || "Catatan tanpa judul"}
                     </h2>
                   </Link>
 
                   {note.isLocked ? (
-                    <div className="relative mt-2 p-2 bg-neutral-100/90 border border-black/10 overflow-hidden select-none">
-                      <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed filter blur-[4px] select-none pointer-events-none opacity-40">
+                    <div className="relative mt-2 p-2.5 bg-neutral-100 border border-black/10 overflow-hidden select-none min-h-[3rem] flex items-center justify-center">
+                      <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed filter blur-[4px] select-none pointer-events-none opacity-40 absolute inset-2">
                         {note.snippet ||
                           "Konten catatan ini terenkripsi aman dengan AES-256-GCM. Buka catatan dan masukkan password untuk membaca isinya."}
                       </p>
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-neutral-900 bg-yellow-300 px-2 py-0.5 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                          <Lock size={10} weight="fill" />
-                          Deskripsi Terkunci
-                        </span>
-                      </div>
+                      <span className="relative z-10 inline-flex items-center gap-1 text-[10px] font-black uppercase text-neutral-900 bg-yellow-300 px-2 py-0.5 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                        <Lock size={10} weight="fill" />
+                        Deskripsi Terkunci
+                      </span>
                     </div>
                   ) : note.snippet ? (
-                    <p className="mt-1.5 text-xs text-neutral-600 line-clamp-2 leading-relaxed">
+                    <p className="mt-1.5 text-xs text-neutral-600 line-clamp-2 leading-relaxed min-h-[2.5rem]">
                       {note.snippet}
                     </p>
                   ) : (
-                    <p className="mt-1.5 text-xs text-neutral-400 italic">
+                    <p className="mt-1.5 text-xs text-neutral-400 italic min-h-[2.5rem]">
                       Catatan masih kosong...
                     </p>
                   )}
                 </div>
 
                 <div className="mt-4 pt-2.5 border-t border-black/10 flex items-center justify-between text-[11px] text-muted-foreground font-medium">
-                  <span>
+                  <span className="flex items-center gap-1 font-semibold">
+                    <CalendarBlank size={12} weight="bold" />
                     {new Date(note.updatedAt).toLocaleDateString("id-ID", {
                       day: "numeric",
                       month: "short",
@@ -609,7 +608,7 @@ export function NotesExplorer({
                   </span>
                   <Link
                     href={`/notes/${note.id}`}
-                    className="inline-flex items-center gap-1 text-black font-bold group-hover:translate-x-0.5 transition-transform"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-400 hover:bg-yellow-300 border border-black text-black text-xs font-bold shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
                   >
                     <span>Buka</span>
                     <ArrowRight size={12} weight="bold" />
@@ -620,132 +619,290 @@ export function NotesExplorer({
           })}
         </div>
       ) : (
-        /* List Mode View (Compact Table Rows) */
+        /* List Mode View (Structured Neo-Brutalist Table Rows) */
         <div className="border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+          {/* Desktop Table Header */}
+          <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2.5 bg-yellow-300/70 border-b-2 border-black text-[11px] font-black text-black uppercase tracking-wider items-center">
+            <div className="col-span-6">Catatan & Ringkasan</div>
+            <div className="col-span-2">Folder</div>
+            <div className="col-span-2">Diperbarui</div>
+            <div className="col-span-2 text-right">Aksi</div>
+          </div>
+
           <ul className="divide-y-2 divide-black/10">
             {filteredNotes.map((note) => {
               const folder = folders.find((f) => f.id === note.folderId);
               return (
                 <li
                   key={note.id}
-                  className="group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 hover:bg-yellow-50/50 transition-colors gap-3"
+                  className="group hover:bg-yellow-50/70 transition-colors"
                 >
-                  <Link
-                    href={`/notes/${note.id}`}
-                    className="flex items-start sm:items-center gap-3 min-w-0 flex-1"
-                  >
-                    <span
-                      className={`p-2 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] shrink-0 ${
-                        note.isLocked
-                          ? "bg-neutral-900 text-yellow-400"
-                          : note.isShared
-                          ? "bg-purple-200 text-purple-900"
-                          : "bg-yellow-200 text-neutral-900"
-                      }`}
-                    >
-                      {note.isLocked ? (
-                        <Lock size={16} weight="fill" />
-                      ) : note.isShared ? (
-                        <ShareNetwork size={16} weight="bold" />
-                      ) : (
-                        <NotePencil size={16} weight="bold" />
-                      )}
-                    </span>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="font-bold text-sm sm:text-base text-black truncate group-hover:underline decoration-2">
-                          {note.title || "Catatan tanpa judul"}
-                        </h2>
-                        {note.isLocked && (
-                          <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-neutral-900 text-yellow-400 border border-black">
-                            Kunci
-                          </span>
+                  {/* Desktop / Tablet Row (md+) */}
+                  <div className="hidden md:grid grid-cols-12 gap-4 items-center px-4 py-3">
+                    {/* Col 1: Note Title, Status Icons & Snippet */}
+                    <div className="col-span-6 min-w-0 flex items-center gap-3">
+                      <Link
+                        href={`/notes/${note.id}`}
+                        className={`w-9 h-9 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] shrink-0 flex items-center justify-center transition-transform group-hover:scale-105 ${
+                          note.isLocked
+                            ? "bg-neutral-900 text-yellow-400"
+                            : note.isShared
+                            ? "bg-purple-200 text-purple-900"
+                            : "bg-yellow-300 text-neutral-900"
+                        }`}
+                        title={
+                          note.isLocked
+                            ? "Catatan Terkunci"
+                            : note.isShared
+                            ? "Catatan Publik"
+                            : "Catatan"
+                        }
+                      >
+                        {note.isLocked ? (
+                          <Lock size={16} weight="fill" />
+                        ) : note.isShared ? (
+                          <ShareNetwork size={16} weight="bold" />
+                        ) : (
+                          <NotePencil size={16} weight="bold" />
                         )}
-                        {note.isShared && (
-                          <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-purple-200 text-purple-900 border border-black">
-                            Publik
+                      </Link>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/notes/${note.id}`}
+                            className="font-bold text-sm text-black truncate hover:underline decoration-2"
+                          >
+                            {note.title || "Catatan tanpa judul"}
+                          </Link>
+                          {note.isLocked && (
+                            <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-neutral-900 text-yellow-400 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] shrink-0">
+                              Kunci
+                            </span>
+                          )}
+                          {note.isShared && (
+                            <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-purple-200 text-purple-900 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] shrink-0">
+                              Publik
+                            </span>
+                          )}
+                        </div>
+
+                        {note.isLocked ? (
+                          <p className="text-xs text-neutral-400 italic truncate mt-0.5 flex items-center gap-1">
+                            <Lock size={10} weight="fill" className="text-neutral-500 inline" />
+                            Konten terenkripsi (masukkan password untuk melihat)
+                          </p>
+                        ) : note.snippet ? (
+                          <p className="text-xs text-neutral-500 truncate mt-0.5">
+                            {note.snippet}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-neutral-400 italic mt-0.5">
+                            Catatan kosong...
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Col 2: Folder */}
+                    <div className="col-span-2 min-w-0">
+                      {folder ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-neutral-800 bg-neutral-50 border border-black/30 rounded-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,0.05)]">
+                          <span
+                            className="inline-block w-2.5 h-2.5 rounded-xs border border-black shrink-0"
+                            style={{ backgroundColor: folder.color }}
+                          />
+                          <span className="truncate max-w-[120px]">{folder.name}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 border border-dashed border-neutral-300 rounded-xs">
+                          Tanpa Folder
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Col 3: Last Updated */}
+                    <div className="col-span-2 text-xs font-semibold text-neutral-600 flex items-center gap-1.5">
+                      <CalendarBlank size={13} weight="bold" className="text-neutral-400" />
+                      <span>
+                        {new Date(note.updatedAt).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+
+                    {/* Col 4: Actions Toolbar */}
+                    <div className="col-span-2 flex items-center justify-end gap-1.5">
+                      <Link
+                        href={`/notes/${note.id}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-400 hover:bg-yellow-300 border-2 border-black text-xs font-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all cursor-pointer"
+                        title="Buka Catatan"
+                      >
+                        <span>Buka</span>
+                        <ArrowRight size={12} weight="bold" />
+                      </Link>
+
+                      {!note.isLocked && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            downloadSingleMarkdownNote(note.title, note.content, {
+                              folderName: folder?.name,
+                              updatedAt: note.updatedAt,
+                              includeFrontmatter: true,
+                            });
+                            toast.success(`Catatan "${note.title || "Catatan"}" berhasil diekspor ke Markdown!`);
+                          }}
+                          className="w-7 h-7 inline-flex items-center justify-center bg-white hover:bg-lime-200 text-neutral-800 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all rounded-xs cursor-pointer"
+                          title="Ekspor catatan ini ke Markdown (.md)"
+                        >
+                          <DownloadSimple size={13} weight="bold" />
+                        </button>
+                      )}
+
+                      <DeleteConfirmButton
+                        action={deleteNoteAction.bind(null, note.id)}
+                        confirmTitle="Hapus Catatan"
+                        confirmMessage={`Hapus catatan "${note.title || "Catatan tanpa judul"}"? Tindakan ini akan menghapus catatan secara permanen.`}
+                        successMessage="Catatan berhasil dihapus."
+                        className="w-7 h-7 inline-flex items-center justify-center bg-white hover:bg-red-100 text-neutral-800 hover:text-red-600 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all rounded-xs cursor-pointer disabled:opacity-50"
+                        iconSize={13}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mobile Row (<md) */}
+                  <div className="md:hidden flex flex-col p-3.5 space-y-2.5">
+                    {/* Top: Icon + Title & Badges + Date */}
+                    <div className="flex items-start gap-2.5">
+                      <Link
+                        href={`/notes/${note.id}`}
+                        className={`w-9 h-9 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] shrink-0 flex items-center justify-center ${
+                          note.isLocked
+                            ? "bg-neutral-900 text-yellow-400"
+                            : note.isShared
+                            ? "bg-purple-200 text-purple-900"
+                            : "bg-yellow-300 text-neutral-900"
+                        }`}
+                      >
+                        {note.isLocked ? (
+                          <Lock size={16} weight="fill" />
+                        ) : note.isShared ? (
+                          <ShareNetwork size={16} weight="bold" />
+                        ) : (
+                          <NotePencil size={16} weight="bold" />
+                        )}
+                      </Link>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Link
+                            href={`/notes/${note.id}`}
+                            className="font-bold text-sm text-black truncate hover:underline decoration-2"
+                          >
+                            {note.title || "Catatan tanpa judul"}
+                          </Link>
+                          {note.isLocked && (
+                            <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-neutral-900 text-yellow-400 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] shrink-0">
+                              Kunci
+                            </span>
+                          )}
+                          {note.isShared && (
+                            <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-purple-200 text-purple-900 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] shrink-0">
+                              Publik
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1 mt-0.5">
+                          <CalendarBlank size={11} weight="bold" />
+                          <span>
+                            {new Date(note.updatedAt).toLocaleDateString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Snippet on mobile */}
+                    {note.isLocked ? (
+                      <p className="text-xs text-neutral-400 italic flex items-center gap-1">
+                        <Lock size={10} weight="fill" className="text-neutral-500 shrink-0" />
+                        Konten terenkripsi (masukkan password untuk melihat)
+                      </p>
+                    ) : note.snippet ? (
+                      <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed">
+                        {note.snippet}
+                      </p>
+                    ) : null}
+
+                    {/* Bottom Row on mobile: Folder on the far left, Action buttons on the far right */}
+                    <div className="flex items-center justify-between pt-2 border-t border-black/10 gap-2">
+                      {/* Left: Folder */}
+                      <div className="min-w-0 flex items-center">
+                        {folder ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-neutral-800 bg-neutral-50 border border-black/30 rounded-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,0.05)]">
+                            <span
+                              className="inline-block w-2.5 h-2.5 rounded-xs border border-black shrink-0"
+                              style={{ backgroundColor: folder.color }}
+                            />
+                            <span className="truncate max-w-[120px]">{folder.name}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 border border-dashed border-neutral-300 rounded-xs">
+                            Tanpa Folder
                           </span>
                         )}
                       </div>
-                      {note.isLocked ? (
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <p className="text-xs text-neutral-500 truncate max-w-xs sm:max-w-md filter blur-[3px] select-none pointer-events-none opacity-40">
-                            {note.snippet || "Konten terenkripsi aman dengan proteksi password."}
-                          </p>
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-neutral-700 bg-neutral-100 px-1.5 py-0.2 border border-black/20 shrink-0">
-                            <Lock size={9} weight="fill" />
-                            Terkunci
-                          </span>
-                        </div>
-                      ) : note.snippet ? (
-                        <p className="text-xs text-muted-foreground truncate max-w-lg mt-0.5">
-                          {note.snippet}
-                        </p>
-                      ) : null}
-                    </div>
-                  </Link>
 
+                      {/* Right: Actions (Buka, Export, Delete) */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Link
+                          href={`/notes/${note.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-400 hover:bg-yellow-300 border-2 border-black text-xs font-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all cursor-pointer"
+                          title="Buka Catatan"
+                        >
+                          <span>Buka</span>
+                          <ArrowRight size={12} weight="bold" />
+                        </Link>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-black/5">
-                    {folder ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-neutral-700 bg-neutral-50 px-2 py-0.5 border border-black/20">
-                        <span
-                          className="inline-block w-2 h-2 rounded-xs border border-black"
-                          style={{ backgroundColor: folder.color }}
+                        {!note.isLocked && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              downloadSingleMarkdownNote(note.title, note.content, {
+                                folderName: folder?.name,
+                                updatedAt: note.updatedAt,
+                                includeFrontmatter: true,
+                              });
+                              toast.success(`Catatan "${note.title || "Catatan"}" berhasil diekspor ke Markdown!`);
+                            }}
+                            className="w-7 h-7 inline-flex items-center justify-center bg-white hover:bg-lime-200 text-neutral-800 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all rounded-xs cursor-pointer"
+                            title="Ekspor catatan ini ke Markdown (.md)"
+                          >
+                            <DownloadSimple size={13} weight="bold" />
+                          </button>
+                        )}
+
+                        <DeleteConfirmButton
+                          action={deleteNoteAction.bind(null, note.id)}
+                          confirmTitle="Hapus Catatan"
+                          confirmMessage={`Hapus catatan "${note.title || "Catatan tanpa judul"}"? Tindakan ini akan menghapus catatan secara permanen.`}
+                          successMessage="Catatan berhasil dihapus."
+                          className="w-7 h-7 inline-flex items-center justify-center bg-white hover:bg-red-100 text-neutral-800 hover:text-red-600 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all rounded-xs cursor-pointer disabled:opacity-50"
+                          iconSize={13}
                         />
-                        <span className="truncate max-w-[100px]">{folder.name}</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-neutral-400 uppercase">
-                        Tanpa Folder
-                      </span>
-                    )}
-
-                    <span className="text-[11px] text-muted-foreground font-medium hidden md:inline">
-                      {new Date(note.updatedAt).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </span>
-
-                    <Link
-                      href={`/notes/${note.id}`}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-neutral-100 hover:bg-yellow-400 border border-black text-xs font-bold shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-colors"
-                    >
-                      <span>Buka</span>
-                      <ArrowRight size={12} weight="bold" />
-                    </Link>
-
-                    {!note.isLocked && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          downloadSingleMarkdownNote(note.title, note.content, {
-                            folderName: folder?.name,
-                            updatedAt: note.updatedAt,
-                            includeFrontmatter: true,
-                          });
-                          toast.success(`Catatan "${note.title || "Catatan"}" berhasil diekspor ke Markdown!`);
-                        }}
-                        className="p-1.5 text-muted-foreground hover:text-black hover:bg-lime-200 border border-black/20 hover:border-black rounded-xs transition-colors inline-flex items-center justify-center cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] bg-white"
-                        title="Ekspor catatan ini ke Markdown (.md)"
-                      >
-                        <DownloadSimple size={13} weight="bold" />
-                      </button>
-                    )}
-
-                    <DeleteConfirmButton
-                      action={deleteNoteAction.bind(null, note.id)}
-                      confirmTitle="Hapus Catatan"
-                      confirmMessage={`Hapus catatan "${note.title || "Catatan tanpa judul"}"? Tindakan ini akan menghapus catatan secara permanen.`}
-                      successMessage="Catatan berhasil dihapus."
-                      className="p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors disabled:opacity-50 inline-flex items-center justify-center cursor-pointer"
-                      iconSize={14}
-                    />
+                      </div>
+                    </div>
                   </div>
                 </li>
               );

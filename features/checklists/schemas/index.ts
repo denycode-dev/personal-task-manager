@@ -3,6 +3,7 @@ import { z } from "zod";
 export const createChecklistSchema = z.object({
   title: z.string().min(1).max(255).default("Checklist tanpa judul"),
   folderId: z.string().uuid().optional().nullable(),
+  deadline: z.string().datetime().optional().nullable(),
 });
 
 export const createChecklistItemSchema = z.object({

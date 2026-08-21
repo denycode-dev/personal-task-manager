@@ -8,57 +8,60 @@ import {
   useSortable, verticalListSortingStrategy, arrayMove
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Plus, Trash, DotsSixVertical, ArrowRight, CircleNotch } from "@phosphor-icons/react";
 import type { KanbanBoard, KanbanCard, KanbanColumn } from "@/lib/db/schema";
-import { createCardAction, reorderCardsAction } from "@/features/kanban/actions/card.action";
+import { reorderCardsAction } from "@/features/kanban/actions/card.action";
 import { createColumnAction, deleteColumnAction, reorderColumnsAction } from "@/features/kanban/actions/column.action";
 import { DeadlineBadge } from "@/features/deadlines/components/deadline-badge";
 import { CardDetailDialog } from "@/features/kanban/components/card-detail-dialog";
+import { CreateCardDialog } from "@/features/kanban/components/create-card-dialog";
 import { useConfirm } from "@/lib/hooks/use-confirm";
 
 type Column = KanbanColumn & { cards: KanbanCard[] };
 
 function KanbanCardItem({ card, onOpen }: { card: KanbanCard; onOpen: (c: KanbanCard) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: card.id, data: { type: "card", card } });
+    useSortable({
+      id: card.id,
+      data: { type: "card", card },
+    });
+
   return (
     <div
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
-        opacity: isDragging ? 0.3 : 1,
+        opacity: isDragging ? 0.35 : 1,
       }}
-      className="bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-3 select-none transition-shadow"
+      onClick={() => onOpen(card)}
+      className="bg-white border-2 border-black p-2.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all cursor-pointer group"
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-1.5">
         <button
           type="button"
           {...attributes}
           {...listeners}
-          className="mt-0.5 text-muted-foreground hover:text-black flex-shrink-0 cursor-grab active:cursor-grabbing touch-none p-0.5 -m-0.5 rounded"
-          aria-label="Geser kartu"
+          onClick={(e) => e.stopPropagation()}
+          className="text-muted-foreground hover:text-black mt-0.5 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+          aria-label={`Geser posisi kartu ${card.title}`}
+          title="Geser posisi kartu"
         >
-          <DotsSixVertical size={16} weight="bold" />
+          <DotsSixVertical size={14} weight="bold" />
         </button>
-        <button
-          type="button"
-          suppressHydrationWarning
-          className="flex-1 min-w-0 text-left cursor-pointer"
-          onClick={() => onOpen(card)}
-        >
-          <p className="text-sm font-medium leading-snug">{card.title}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold leading-snug group-hover:underline decoration-1">{card.title}</p>
           {card.description && (
-            <p className="text-xs text-muted-foreground mt-1 truncate">{card.description}</p>
+            <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{card.description}</p>
           )}
           {card.deadline && (
-            <div className="mt-1">
+            <div className="mt-1.5 flex items-center gap-1">
               <DeadlineBadge deadline={card.deadline} />
             </div>
           )}
-        </button>
+        </div>
       </div>
     </div>
   );
@@ -69,11 +72,13 @@ function KanbanColumnView({
   boardId,
   isFirst,
   onCardOpen,
+  onAddCardToColumn,
 }: {
   column: Column;
   boardId: string;
   isFirst: boolean;
   onCardOpen: (c: KanbanCard) => void;
+  onAddCardToColumn: (columnId: string) => void;
 }) {
   const confirm = useConfirm();
   const [isPending, startTransition] = useTransition();
@@ -131,19 +136,30 @@ function KanbanColumnView({
             <span className="text-[10px] bg-yellow-400 border border-black px-1 font-bold uppercase flex-shrink-0">MASUK</span>
           )}
         </div>
-        <button
-          suppressHydrationWarning
-          onClick={handleDeleteColumn}
-          disabled={isPending}
-          className="p-1 text-muted-foreground hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center justify-center flex-shrink-0 ml-1"
-          title="Hapus kolom"
-        >
-          {isPending ? (
-            <CircleNotch size={14} weight="bold" className="animate-spin text-red-600" />
-          ) : (
-            <Trash size={14} weight="bold" />
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            suppressHydrationWarning
+            type="button"
+            onClick={() => onAddCardToColumn(column.id)}
+            className="p-1 text-black hover:bg-yellow-300 border border-transparent hover:border-black rounded transition-colors cursor-pointer inline-flex items-center justify-center"
+            title={`Tambah kartu ke kolom ${column.name}`}
+          >
+            <Plus size={14} weight="bold" />
+          </button>
+          <button
+            suppressHydrationWarning
+            onClick={handleDeleteColumn}
+            disabled={isPending}
+            className="p-1 text-muted-foreground hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center justify-center flex-shrink-0"
+            title="Hapus kolom"
+          >
+            {isPending ? (
+              <CircleNotch size={14} weight="bold" className="animate-spin text-red-600" />
+            ) : (
+              <Trash size={14} weight="bold" />
+            )}
+          </button>
+        </div>
       </div>
       <SortableContext items={column.cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
         <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px]">
@@ -151,17 +167,27 @@ function KanbanColumnView({
             <KanbanCardItem key={card.id} card={card} onOpen={onCardOpen} />
           ))}
           {column.cards.length === 0 && (
-            <div className="border-2 border-dashed border-black/20 p-4 text-center text-xs text-muted-foreground h-24 flex items-center justify-center">
-              {isFirst ? "Tambah kartu dari toolbar" : "Seret kartu ke sini"}
-            </div>
+            <button
+              type="button"
+              onClick={() => onAddCardToColumn(column.id)}
+              className="w-full border-2 border-dashed border-black/20 p-4 text-center text-xs text-muted-foreground h-24 flex flex-col items-center justify-center hover:bg-yellow-50 hover:border-black/50 transition-colors cursor-pointer gap-1"
+            >
+              <Plus size={16} weight="bold" />
+              <span>Tambah kartu baru di sini</span>
+            </button>
           )}
         </div>
       </SortableContext>
-      {!isFirst && (
-        <div className="flex items-center justify-center gap-1 py-1.5 border-t border-black/10 text-[10px] text-muted-foreground">
-          <ArrowRight size={11} /> seret dari kiri
-        </div>
-      )}
+      <div className="p-1.5 border-t border-black/10 flex items-center justify-between text-[11px] bg-white">
+        <button
+          type="button"
+          onClick={() => onAddCardToColumn(column.id)}
+          className="w-full flex items-center justify-center gap-1 py-1 text-xs font-bold text-neutral-800 hover:bg-yellow-300 border border-transparent hover:border-black transition-all cursor-pointer"
+        >
+          <Plus size={12} weight="bold" />
+          <span>Tambah Kartu</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -178,15 +204,12 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null);
   const [activeColumn, setActiveColumn] = useState<Column | null>(null);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
-  const [newTitle, setNewTitle] = useState("");
-  const [addingCard, setAddingCard] = useState(false);
+  const [isCreateCardOpen, setIsCreateCardOpen] = useState(false);
+  const [createCardDefaultColumnId, setCreateCardDefaultColumnId] = useState<string | undefined>(undefined);
   const [addingCol, setAddingCol] = useState(false);
   const [newColName, setNewColName] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    setColumns(initialColumns);
-  }, [initialColumns]);
 
   const handleCardUpdated = (updated: KanbanCard) =>
     setColumns((prev) =>
@@ -204,28 +227,19 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
       }))
     );
 
-  const handleAddCard = () => {
-    if (!newTitle.trim() || columns.length === 0) return;
-    const first = columns[0];
-    startTransition(async () => {
-      const result = await createCardAction({
-        columnId: first.id,
-        title: newTitle.trim(),
-        position: first.cards.length,
-      });
-      if (result.success) {
-        setColumns((prev) =>
-          prev.map((col, i) =>
-            i === 0 ? { ...col, cards: [...col.cards, result.data] } : col
-          )
-        );
-        setNewTitle("");
-        setAddingCard(false);
-        toast.success(`Kartu ditambahkan ke "${first.name}".`);
-      } else {
-        toast.error(result.error);
-      }
-    });
+  const handleOpenCreateCard = (columnId?: string) => {
+    setCreateCardDefaultColumnId(columnId || columns[0]?.id);
+    setIsCreateCardOpen(true);
+  };
+
+  const handleCardCreated = (newCard: KanbanCard, targetColumnId: string) => {
+    setColumns((prev) =>
+      prev.map((col) =>
+        col.id === targetColumnId
+          ? { ...col, cards: [...col.cards, newCard] }
+          : col
+      )
+    );
   };
 
   const handleAddColumn = () => {
@@ -413,59 +427,20 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
     <div className="flex flex-col h-full">
       {/* Board toolbar */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-black/15 bg-white flex-shrink-0 flex-wrap">
-        {addingCard ? (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <input
-              suppressHydrationWarning
-              autoFocus
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddCard();
-                if (e.key === "Escape") setAddingCard(false);
-              }}
-              placeholder={columns[0] ? `Judul kartu → kolom "${columns[0].name}"...` : "Judul kartu..."}
-              className="border-2 border-black px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 flex-1 min-w-0"
-              disabled={isPending}
-            />
-            <button
-              suppressHydrationWarning
-              onClick={handleAddCard}
-              disabled={isPending || !newTitle.trim()}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 border-2 border-black text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 cursor-pointer min-w-[75px] justify-center"
-            >
-              {isPending ? (
-                <CircleNotch size={14} weight="bold" className="animate-spin" />
-              ) : (
-                <span>Tambah</span>
-              )}
-            </button>
-            <button
-              suppressHydrationWarning
-              onClick={() => {
-                setAddingCard(false);
-                setNewTitle("");
-              }}
-              disabled={isPending}
-              className="px-3 py-1.5 border-2 border-black text-sm hover:bg-gray-100 cursor-pointer disabled:opacity-50"
-            >
-              Batal
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3">
-            <button
-              suppressHydrationWarning
-              onClick={() => setAddingCard(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 border-2 border-black text-sm font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-1px] transition-transform cursor-pointer"
-            >
-              <Plus size={16} weight="bold" /> Tambah Kartu
-            </button>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <ArrowRight size={12} /> Masuk ke kolom pertama, seret ke kanan untuk kemajuan
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            suppressHydrationWarning
+            type="button"
+            onClick={() => handleOpenCreateCard()}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 border-2 border-black text-xs sm:text-sm font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all cursor-pointer"
+          >
+            <Plus size={16} weight="bold" />
+            <span>Tambah Kartu Baru</span>
+          </button>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground hidden sm:flex">
+            <ArrowRight size={12} /> Klik kartu untuk melihat detail, deskripsi, deadline & lampiran
+          </span>
+        </div>
       </div>
 
       {/* Columns */}
@@ -486,6 +461,7 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
                 boardId={board.id}
                 isFirst={idx === 0}
                 onCardOpen={setSelectedCard}
+                onAddCardToColumn={handleOpenCreateCard}
               />
             ))}
           </SortableContext>
@@ -508,6 +484,7 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
                 <div className="flex gap-1">
                   <button
                     suppressHydrationWarning
+                    type="button"
                     onClick={handleAddColumn}
                     disabled={isPending || !newColName.trim()}
                     className="inline-flex items-center gap-1 px-3 py-1 text-xs bg-yellow-400 hover:bg-yellow-300 border-2 border-black font-bold cursor-pointer disabled:opacity-50 min-w-[65px] justify-center"
@@ -520,6 +497,7 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
                   </button>
                   <button
                     suppressHydrationWarning
+                    type="button"
                     onClick={() => setAddingCol(false)}
                     disabled={isPending}
                     className="px-3 py-1 text-xs border-2 border-black cursor-pointer disabled:opacity-50"
@@ -531,6 +509,7 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
             ) : (
               <button
                 suppressHydrationWarning
+                type="button"
                 onClick={() => setAddingCol(true)}
                 className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-black p-4 text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer"
               >
@@ -586,6 +565,16 @@ export function KanbanBoard({ board, initialColumns }: { board: KanbanBoard; ini
         </DragOverlay>
       </DndContext>
 
+      {/* Create Card Full Dialog */}
+      <CreateCardDialog
+        open={isCreateCardOpen}
+        onClose={() => setIsCreateCardOpen(false)}
+        columns={columns}
+        defaultColumnId={createCardDefaultColumnId}
+        onCardCreated={handleCardCreated}
+      />
+
+      {/* Card Detail Dialog */}
       {selectedCard && (
         <CardDetailDialog
           card={selectedCard}

@@ -12,10 +12,10 @@ export const checklistService = {
     if (!cl) throw new NotFoundError("Checklist tidak ditemukan.");
     return cl;
   },
-  async create(title: string, folderId?: string | null): Promise<Checklist> {
-    return checklistRepository.create({ title, folderId: folderId ?? null });
+  async create(title: string, folderId?: string | null, deadline?: Date | null): Promise<Checklist> {
+    return checklistRepository.create({ title, folderId: folderId ?? null, deadline: deadline ?? null });
   },
-  async update(id: string, data: { title?: string; folderId?: string | null }): Promise<Checklist> {
+  async update(id: string, data: { title?: string; folderId?: string | null; deadline?: Date | null }): Promise<Checklist> {
     const existing = await checklistRepository.findById(id);
     if (!existing) throw new NotFoundError("Checklist tidak ditemukan.");
     const updated = await checklistRepository.update(id, data);
@@ -28,6 +28,17 @@ export const checklistService = {
     await checklistRepository.delete(id);
   },
   async addItem(checklistId: string, content: string, deadline?: Date | null): Promise<ChecklistItem> {
+    const checklist = await checklistRepository.findById(checklistId);
+    if (!checklist) throw new NotFoundError("Checklist tidak ditemukan.");
+
+    if (checklist.deadline && deadline && deadline.getTime() > new Date(checklist.deadline).getTime()) {
+      const formattedDeadline = new Intl.DateTimeFormat("id-ID", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(checklist.deadline));
+      throw new Error(`Deadline item (${new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(deadline)}) tidak boleh melebihi deadline tugas (${formattedDeadline}).`);
+    }
+
     const items = await checklistItemRepository.findByChecklistId(checklistId);
     return checklistItemRepository.create({ checklistId, content, position: items.length, deadline: deadline ?? null });
   },

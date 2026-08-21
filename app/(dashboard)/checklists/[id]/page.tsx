@@ -8,6 +8,7 @@ import { AddItemForm } from "@/features/checklists/components/add-item-form";
 import { deleteChecklistAction } from "@/features/checklists/actions/checklist.action";
 import { folderRepository } from "@/features/folders/repositories/folder.repository";
 import { ChecklistFolderPicker } from "@/features/checklists/components/checklist-folder-picker";
+import { ChecklistDeadlinePicker } from "@/features/checklists/components/checklist-deadline-picker";
 import { DeleteConfirmButton } from "@/components/ui/delete-confirm-button";
 import { ArrowLeft, CheckCircle, ListChecks } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
@@ -49,7 +50,12 @@ export default async function ChecklistDetailPage({
           </h1>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <ChecklistDeadlinePicker
+            checklistId={checklist.id}
+            currentDeadline={checklist.deadline}
+          />
+
           <ChecklistFolderPicker
             checklistId={checklist.id}
             currentFolderId={checklist.folderId}
@@ -101,7 +107,7 @@ export default async function ChecklistDetailPage({
           </div>
         )}
 
-        <AddItemForm checklistId={id} />
+        <AddItemForm checklistId={id} maxDeadline={checklist.deadline} />
       </div>
     </div>
   );

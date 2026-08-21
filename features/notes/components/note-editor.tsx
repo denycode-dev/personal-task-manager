@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, type Content } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import { Table } from "@tiptap/extension-table/table";
@@ -57,6 +57,9 @@ export function NoteEditor({ note, isLocked = false }: Props) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleImageProcessAndInsertRef = useRef<
+    ((file: File | Blob, position?: number) => Promise<void>) | null
+  >(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -89,76 +92,6 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     [note.id, isLocked, sessionPassword]
   );
 
-  /**
-   * Alur terpusat untuk memproses, mengompresi ke WebP 80%, dan mengunggah gambar ke ImageKit
-   */
-  const handleImageProcessAndInsert = useCallback(
-    async (file: File | Blob, position?: number) => {
-      setIsUploadingImage(true);
-      const toastId = toast.loading("Mengoptimasi gambar ke format WebP (80%)...");
-
-      try {
-        // 1. Optimasi di browser menggunakan Canvas API
-        const { file: optimizedFile, reductionPercentage, optimizedSize } =
-          await optimizeImageToWebP(file, 0.8, "note-image");
-
-        toast.loading("Mengunggah gambar ke ImageKit CDN...", { id: toastId });
-
-        // 2. Unggah ke ImageKit CDN
-        const uploaded = await uploadClientFile(optimizedFile, {
-          folder: "/denycode/notes",
-        });
-
-        // 3. Sisipkan gambar ke editor Tiptap pada posisi kursor atau koordinat drop
-        if (editor) {
-          if (typeof position === "number") {
-            editor
-              .chain()
-              .focus()
-              .insertContentAt(position, {
-                type: "image",
-                attrs: {
-                  src: uploaded.url,
-                  alt: uploaded.name || "Gambar Catatan",
-                  width: "100%",
-                  alignment: "center",
-                },
-              })
-              .run();
-          } else {
-            editor
-              .chain()
-              .focus()
-              .setImage({
-                src: uploaded.url,
-                alt: uploaded.name || "Gambar Catatan",
-              })
-              .run();
-          }
-        }
-
-        const savingsText =
-          reductionPercentage > 0 ? ` (hemat ${reductionPercentage}%)` : "";
-        toast.success(
-          `Gambar berhasil diunggah! ${formatFileSize(optimizedSize)}${savingsText} [WebP 80%]`,
-          { id: toastId }
-        );
-      } catch (err: unknown) {
-        const errorMsg =
-          err instanceof Error
-            ? err.message
-            : "Terjadi kesalahan saat mengunggah gambar.";
-        toast.error(`Gagal mengunggah gambar: ${errorMsg}`, { id: toastId });
-      } finally {
-        setIsUploadingImage(false);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      }
-    },
-    // editor is referenced dynamically below
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
-
   const editor = useEditor({
     extensions: editorExtensions,
     content: (unlockedContent as Record<string, unknown>) ?? "",
@@ -173,7 +106,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
             const file = item.getAsFile();
             if (file) {
               event.preventDefault();
-              handleImageProcessAndInsert(file);
+              handleImageProcessAndInsertRef.current?.(file);
               return true;
             }
           }
@@ -194,24 +127,109 @@ export function NoteEditor({ note, isLocked = false }: Props) {
               left: event.clientX,
               top: event.clientY,
             });
-            handleImageProcessAndInsert(file, coordinates?.pos);
+            handleImageProcessAndInsertRef.current?.(file, coordinates?.pos);
             return true;
           }
         }
         return false;
       },
     },
-    onUpdate({ editor }) {
-      triggerSave(titleRef.current, editor.getJSON());
+    onUpdate({ editor: currentEditor }) {
+      triggerSave(titleRef.current, currentEditor.getJSON());
     },
     immediatelyRender: false,
   });
+
+  /**
+   * Alur terpusat untuk memproses, mengompresi ke WebP 80%, dan mengunggah gambar ke ImageKit
+   */
+  const handleImageProcessAndInsert = useCallback(
+    async (file: File | Blob, position?: number) => {
+      if (!editor) {
+        toast.error("Editor belum siap, silakan coba beberapa saat lagi.");
+        return;
+      }
+
+      setIsUploadingImage(true);
+      const toastId = toast.loading("Mengoptimasi gambar ke format WebP (80%)...");
+
+      try {
+        // 1. Optimasi di browser menggunakan Canvas API
+        const { file: optimizedFile, reductionPercentage, optimizedSize } =
+          await optimizeImageToWebP(file, 0.8, "note-image");
+
+        toast.loading("Mengunggah gambar ke ImageKit CDN...", { id: toastId });
+
+        // 2. Unggah ke ImageKit CDN
+        const uploaded = await uploadClientFile(optimizedFile, {
+          folder: "/denycode/notes",
+        });
+
+        // 3. Sisipkan gambar ke editor Tiptap pada posisi kursor atau koordinat drop
+        if (typeof position === "number") {
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(position, {
+              type: "image",
+              attrs: {
+                src: uploaded.url,
+                alt: uploaded.name || "Gambar Catatan",
+                width: "100%",
+                alignment: "center",
+              },
+            })
+            .run();
+        } else {
+          editor
+            .chain()
+            .focus()
+            .insertContent({
+              type: "image",
+              attrs: {
+                src: uploaded.url,
+                alt: uploaded.name || "Gambar Catatan",
+                width: "100%",
+                alignment: "center",
+              },
+            })
+            .run();
+        }
+
+        // Trigger auto-save immediately to persist image in note
+        triggerSave(titleRef.current, editor.getJSON());
+
+        const savingsText =
+          reductionPercentage > 0 ? ` (hemat ${reductionPercentage}%)` : "";
+        toast.success(
+          `Gambar berhasil diunggah! ${formatFileSize(optimizedSize)}${savingsText} [WebP 80%]`,
+          { id: toastId }
+        );
+      } catch (err: unknown) {
+        const errorMsg =
+          err instanceof Error
+            ? err.message
+            : "Terjadi kesalahan saat mengunggah gambar.";
+        toast.error(`Gagal mengunggah gambar: ${errorMsg}`, { id: toastId });
+      } finally {
+        setIsUploadingImage(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    },
+    [editor, triggerSave]
+  );
+
+  useEffect(() => {
+    handleImageProcessAndInsertRef.current = handleImageProcessAndInsert;
+  }, [handleImageProcessAndInsert]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
     setTitle(newTitle);
     titleRef.current = newTitle;
-    triggerSave(newTitle, editor?.getJSON());
+    if (editor) {
+      triggerSave(newTitle, editor.getJSON());
+    }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,7 +248,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       if (res.success) {
         setSessionPassword(unlockPasswordInput);
         setUnlockedContent(res.data.content ?? {});
-        editor?.commands.setContent((res.data.content as any) ?? {});
+        editor?.commands.setContent((res.data.content as Content) ?? {});
         toast.success("Catatan berhasil didekripsi!");
       } else {
         toast.error(res.error ?? "Password salah.");
@@ -241,6 +259,10 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       setIsUnlocking(false);
     }
   };
+
+  const handleOpenImagePicker = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -309,19 +331,6 @@ export function NoteEditor({ note, isLocked = false }: Props) {
   if (!editor) return null;
 
   const toolbarGroups: ToolbarBtn[][] = [
-    // Media & Image Upload
-    [
-      {
-        label: (
-          <span className="flex items-center gap-1">
-            <ImageIcon size={14} weight="bold" />
-            <span>Gambar</span>
-          </span>
-        ),
-        title: "Unggah Gambar (Otomatis WebP 80% ke ImageKit)",
-        action: () => fileInputRef.current?.click(),
-      },
-    ],
     // Text formatting
     [
       { label: "B",  title: "Bold",          action: () => editor.chain().focus().toggleBold().run(),          active: editor.isActive("bold") },
@@ -396,6 +405,20 @@ export function NoteEditor({ note, isLocked = false }: Props) {
 
       {/* Toolbar */}
       <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-2 border-b border-black/15 bg-white sticky top-[57px] z-10 items-center">
+        {/* Media & Image Upload Button */}
+        <div className="flex gap-0.5">
+          <button
+            suppressHydrationWarning
+            type="button"
+            onClick={handleOpenImagePicker}
+            title="Unggah Gambar (Otomatis WebP 80% ke ImageKit)"
+            className="px-2 py-1 text-xs font-mono border border-black/30 transition-colors select-none cursor-pointer flex items-center gap-1 bg-white text-neutral-800 hover:bg-yellow-100 hover:border-black"
+          >
+            <ImageIcon size={14} weight="bold" />
+            <span>Gambar</span>
+          </button>
+        </div>
+
         {toolbarGroups.map((group, gi) => (
           <div key={gi} className="flex gap-0.5">
             {group.map(({ label, title, action, active }, idx) => (

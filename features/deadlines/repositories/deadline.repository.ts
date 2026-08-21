@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
-import { kanbanCards, checklistItems } from "@/lib/db/schema";
+import { kanbanCards, checklistItems, checklists } from "@/lib/db/schema";
 import { isNotNull, lte, and, eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
 
 export const deadlineRepository = {
   async getUpcomingKanbanCards(withinMs: number) {
@@ -33,5 +32,17 @@ export const deadlineRepository = {
           eq(checklistItems.isDone, false)
         )
       );
+  },
+
+  async getUpcomingChecklists(withinMs: number) {
+    const cutoff = new Date(Date.now() + withinMs);
+    return db
+      .select({
+        id: checklists.id,
+        title: checklists.title,
+        deadline: checklists.deadline,
+      })
+      .from(checklists)
+      .where(and(isNotNull(checklists.deadline), lte(checklists.deadline, cutoff)));
   },
 };

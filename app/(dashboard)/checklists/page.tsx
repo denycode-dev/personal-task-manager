@@ -6,6 +6,7 @@ import { folderRepository } from "@/features/folders/repositories/folder.reposit
 import { deleteChecklistAction } from "@/features/checklists/actions/checklist.action";
 import { DeleteConfirmButton } from "@/components/ui/delete-confirm-button";
 import { CreateChecklistForm } from "@/features/checklists/components/create-checklist-form";
+import { DeadlineBadge } from "@/features/deadlines/components/deadline-badge";
 import { CheckSquareOffset, ArrowRight, ListChecks } from "@phosphor-icons/react/dist/ssr";
 
 export default async function ChecklistsPage({
@@ -87,7 +88,7 @@ export default async function ChecklistsPage({
                     <CheckSquareOffset size={20} weight="fill" />
                   </span>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-bold text-base text-black truncate group-hover:underline decoration-2">
                         {cl.title}
                       </p>
@@ -100,6 +101,11 @@ export default async function ChecklistsPage({
                           <span className="truncate max-w-[100px]">{folder.name}</span>
                         </span>
                       ) : null}
+                      {cl.deadline && (
+                        <div className="shrink-0">
+                          <DeadlineBadge deadline={new Date(cl.deadline)} />
+                        </div>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Dibuat {new Date(cl.createdAt).toLocaleDateString("id-ID", {

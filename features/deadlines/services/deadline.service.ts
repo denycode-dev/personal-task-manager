@@ -7,9 +7,10 @@ const UPCOMING_WINDOW_MS = 48 * 60 * 60 * 1000;
 
 export const deadlineService = {
   async getUpcomingDeadlines(): Promise<UpcomingDeadline[]> {
-    const [kanbanCards, checklistItems] = await Promise.all([
+    const [kanbanCards, checklistItems, checklistsList] = await Promise.all([
       deadlineRepository.getUpcomingKanbanCards(UPCOMING_WINDOW_MS),
       deadlineRepository.getUpcomingChecklistItems(UPCOMING_WINDOW_MS),
+      deadlineRepository.getUpcomingChecklists(UPCOMING_WINDOW_MS),
     ]);
 
     const fromKanban: UpcomingDeadline[] = kanbanCards
@@ -23,7 +24,7 @@ export const deadlineService = {
         status: getDeadlineStatus(c.deadline),
       }));
 
-    const fromChecklist: UpcomingDeadline[] = checklistItems
+    const fromChecklistItems: UpcomingDeadline[] = checklistItems
       .filter((i) => i.deadline)
       .map((i) => ({
         id: i.id,
@@ -34,7 +35,18 @@ export const deadlineService = {
         status: getDeadlineStatus(i.deadline),
       }));
 
-    return [...fromKanban, ...fromChecklist].sort(
+    const fromChecklists: UpcomingDeadline[] = checklistsList
+      .filter((cl) => cl.deadline)
+      .map((cl) => ({
+        id: cl.id,
+        sourceId: cl.id,
+        source: "checklist",
+        title: `[Tugas] ${cl.title}`,
+        deadline: cl.deadline!,
+        status: getDeadlineStatus(cl.deadline),
+      }));
+
+    return [...fromKanban, ...fromChecklistItems, ...fromChecklists].sort(
       (a, b) => a.deadline.getTime() - b.deadline.getTime()
     );
   },
