@@ -2,8 +2,38 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { getUploadAuthParams } from "@imagekit/next/server";
 import { uploadFile } from "@/lib/imagekit/upload";
 import { MAX_FILE_SIZE_BYTES } from "@/config/app";
+
+export async function GET() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Akses ditolak." }, { status: 401 });
+  }
+
+  const publicKey = process.env.IMAGEKIT_PUBLIC_KEY || "";
+  const privateKey = process.env.IMAGEKIT_PRIVATE_KEY || "";
+  const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT || "";
+
+  if (!publicKey || !privateKey) {
+    return NextResponse.json(
+      { error: "Konfigurasi ImageKit (API keys) belum lengkap." },
+      { status: 500 }
+    );
+  }
+
+  const authParams = getUploadAuthParams({
+    publicKey,
+    privateKey,
+  });
+
+  return NextResponse.json({
+    ...authParams,
+    publicKey,
+    urlEndpoint,
+  });
+}
 
 export async function POST(request: NextRequest) {
   const session = await getSession();

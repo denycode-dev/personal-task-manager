@@ -14,6 +14,7 @@ import { DeadlineBadge } from "@/features/deadlines/components/deadline-badge";
 import { toast } from "sonner";
 import { useConfirm } from "@/lib/hooks/use-confirm";
 import { MAX_FILE_SIZE_BYTES } from "@/config/app";
+import { uploadClientFile } from "@/lib/imagekit/client-upload";
 import type { KanbanCard, KanbanCardAttachment } from "@/lib/db/schema";
 
 type Props = {
@@ -110,21 +111,10 @@ export function CardDetailDialog({ card, open, onClose, onUpdated, onDeleted }: 
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "/denycode/kanban");
-
-      const uploadRes = await fetch("/api/upload/imagekit", {
-        method: "POST",
-        body: formData,
+      const uploaded = await uploadClientFile(file, {
+        folder: "/denycode/kanban",
       });
 
-      if (!uploadRes.ok) {
-        const errData = await uploadRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Gagal mengunggah file ke ImageKit.");
-      }
-
-      const uploaded = await uploadRes.json();
       const saveRes = await addCardAttachmentAction(card.id, {
         fileUrl: uploaded.url,
         imagekitFileId: uploaded.fileId,

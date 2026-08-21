@@ -20,7 +20,7 @@ export async function uploadFile(
 
   const client = getImageKitClient();
   const result = await client.files.upload({
-    file: file as any,
+    file: file as unknown as string,
     fileName,
     folder,
     useUniqueFileName: true,

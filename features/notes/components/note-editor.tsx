@@ -3,7 +3,6 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
-import Image from "@tiptap/extension-image";
 import { Table } from "@tiptap/extension-table/table";
 import { TableRow } from "@tiptap/extension-table/row";
 import { TableHeader } from "@tiptap/extension-table/header";
@@ -13,7 +12,10 @@ import { updateNoteAction } from "@/features/notes/actions/update-note.action";
 import { unlockNoteAction, saveLockedNoteAction } from "@/features/notes/actions/lock-note.action";
 import { toast } from "sonner";
 import { AUTO_SAVE_DEBOUNCE_MS } from "@/config/app";
-import { Lock, Key, ShieldCheck, CircleNotch } from "@phosphor-icons/react";
+import { Lock, Key, ShieldCheck, CircleNotch, Image as ImageIcon } from "@phosphor-icons/react";
+import { CustomImage } from "@/features/notes/extensions/custom-image-extension";
+import { optimizeImageToWebP, formatFileSize } from "@/features/notes/utils/image-optimizer";
+import { uploadClientFile } from "@/lib/imagekit/client-upload";
 import type { Note } from "@/lib/db/schema";
 
 type Props = {
@@ -22,7 +24,7 @@ type Props = {
 };
 
 type ToolbarBtn = {
-  label: string;
+  label: React.ReactNode;
   title: string;
   action: () => void;
   active?: boolean;
@@ -33,7 +35,7 @@ const editorExtensions = [
     codeBlock: { HTMLAttributes: { class: "not-prose" } },
   }),
   Underline,
-  Image,
+  CustomImage,
   Table.configure({ resizable: true }),
   TableRow,
   TableHeader,
@@ -44,7 +46,6 @@ export function NoteEditor({ note, isLocked = false }: Props) {
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   const [title, setTitle] = useState(note.title);
   const titleRef = useRef(title);
-  titleRef.current = title;
 
   const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [unlockedContent, setUnlockedContent] = useState<unknown | null>(
@@ -52,9 +53,15 @@ export function NoteEditor({ note, isLocked = false }: Props) {
   );
   const [unlockPasswordInput, setUnlockPasswordInput] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    titleRef.current = title;
+  }, [title]);
 
   const triggerSave = useCallback(
     (newTitle: string, content: unknown) => {
@@ -82,9 +89,118 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     [note.id, isLocked, sessionPassword]
   );
 
+  /**
+   * Alur terpusat untuk memproses, mengompresi ke WebP 80%, dan mengunggah gambar ke ImageKit
+   */
+  const handleImageProcessAndInsert = useCallback(
+    async (file: File | Blob, position?: number) => {
+      setIsUploadingImage(true);
+      const toastId = toast.loading("Mengoptimasi gambar ke format WebP (80%)...");
+
+      try {
+        // 1. Optimasi di browser menggunakan Canvas API
+        const { file: optimizedFile, reductionPercentage, optimizedSize } =
+          await optimizeImageToWebP(file, 0.8, "note-image");
+
+        toast.loading("Mengunggah gambar ke ImageKit CDN...", { id: toastId });
+
+        // 2. Unggah ke ImageKit CDN
+        const uploaded = await uploadClientFile(optimizedFile, {
+          folder: "/denycode/notes",
+        });
+
+        // 3. Sisipkan gambar ke editor Tiptap pada posisi kursor atau koordinat drop
+        if (editor) {
+          if (typeof position === "number") {
+            editor
+              .chain()
+              .focus()
+              .insertContentAt(position, {
+                type: "image",
+                attrs: {
+                  src: uploaded.url,
+                  alt: uploaded.name || "Gambar Catatan",
+                  width: "100%",
+                  alignment: "center",
+                },
+              })
+              .run();
+          } else {
+            editor
+              .chain()
+              .focus()
+              .setImage({
+                src: uploaded.url,
+                alt: uploaded.name || "Gambar Catatan",
+              })
+              .run();
+          }
+        }
+
+        const savingsText =
+          reductionPercentage > 0 ? ` (hemat ${reductionPercentage}%)` : "";
+        toast.success(
+          `Gambar berhasil diunggah! ${formatFileSize(optimizedSize)}${savingsText} [WebP 80%]`,
+          { id: toastId }
+        );
+      } catch (err: unknown) {
+        const errorMsg =
+          err instanceof Error
+            ? err.message
+            : "Terjadi kesalahan saat mengunggah gambar.";
+        toast.error(`Gagal mengunggah gambar: ${errorMsg}`, { id: toastId });
+      } finally {
+        setIsUploadingImage(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    },
+    // editor is referenced dynamically below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
   const editor = useEditor({
     extensions: editorExtensions,
-    content: (unlockedContent as any) ?? "",
+    content: (unlockedContent as Record<string, unknown>) ?? "",
+    editorProps: {
+      handlePaste(view, event) {
+        const items = event.clipboardData?.items;
+        if (!items) return false;
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (file) {
+              event.preventDefault();
+              handleImageProcessAndInsert(file);
+              return true;
+            }
+          }
+        }
+        return false;
+      },
+      handleDrop(view, event, _slice, moved) {
+        if (
+          !moved &&
+          event.dataTransfer &&
+          event.dataTransfer.files &&
+          event.dataTransfer.files.length > 0
+        ) {
+          const file = event.dataTransfer.files[0];
+          if (file.type.startsWith("image/")) {
+            event.preventDefault();
+            const coordinates = view.posAtCoords({
+              left: event.clientX,
+              top: event.clientY,
+            });
+            handleImageProcessAndInsert(file, coordinates?.pos);
+            return true;
+          }
+        }
+        return false;
+      },
+    },
     onUpdate({ editor }) {
       triggerSave(titleRef.current, editor.getJSON());
     },
@@ -98,6 +214,12 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     triggerSave(newTitle, editor?.getJSON());
   };
 
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleImageProcessAndInsert(file);
+  };
+
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!unlockPasswordInput) return;
@@ -108,7 +230,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       if (res.success) {
         setSessionPassword(unlockPasswordInput);
         setUnlockedContent(res.data.content ?? {});
-        editor?.commands.setContent(res.data.content as any);
+        editor?.commands.setContent((res.data.content as any) ?? {});
         toast.success("Catatan berhasil didekripsi!");
       } else {
         toast.error(res.error ?? "Password salah.");
@@ -159,7 +281,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
               suppressHydrationWarning
               type="submit"
               disabled={isUnlocking || !unlockPasswordInput}
-              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform disabled:opacity-50 min-h-[36px]"
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform disabled:opacity-50 min-h-[36px] cursor-pointer"
             >
               {isUnlocking ? (
                 <>
@@ -187,6 +309,19 @@ export function NoteEditor({ note, isLocked = false }: Props) {
   if (!editor) return null;
 
   const toolbarGroups: ToolbarBtn[][] = [
+    // Media & Image Upload
+    [
+      {
+        label: (
+          <span className="flex items-center gap-1">
+            <ImageIcon size={14} weight="bold" />
+            <span>Gambar</span>
+          </span>
+        ),
+        title: "Unggah Gambar (Otomatis WebP 80% ke ImageKit)",
+        action: () => fileInputRef.current?.click(),
+      },
+    ],
     // Text formatting
     [
       { label: "B",  title: "Bold",          action: () => editor.chain().focus().toggleBold().run(),          active: editor.isActive("bold") },
@@ -228,6 +363,15 @@ export function NoteEditor({ note, isLocked = false }: Props) {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Hidden File Input for Image Upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
+
       {/* Title + save state bar */}
       <div className="flex items-center justify-between px-6 py-3 border-b-2 border-black bg-white sticky top-0 z-10 gap-4">
         <input
@@ -251,17 +395,17 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-2 border-b border-black/15 bg-white sticky top-[57px] z-10">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-2 border-b border-black/15 bg-white sticky top-[57px] z-10 items-center">
         {toolbarGroups.map((group, gi) => (
           <div key={gi} className="flex gap-0.5">
-            {group.map(({ label, title, action, active }) => (
+            {group.map(({ label, title, action, active }, idx) => (
               <button
                 suppressHydrationWarning
-                key={label}
+                key={idx}
                 onClick={action}
                 title={title}
-                className={`px-2 py-1 text-xs font-mono border border-black/30 transition-colors select-none
-                  ${active ? "bg-yellow-400 border-black font-bold" : "bg-white hover:bg-gray-100"}`}
+                className={`px-2 py-1 text-xs font-mono border border-black/30 transition-colors select-none cursor-pointer flex items-center gap-1
+                  ${active ? "bg-yellow-400 border-black font-bold text-black" : "bg-white text-neutral-800 hover:bg-yellow-100 hover:border-black"}`}
               >
                 {label}
               </button>
@@ -270,7 +414,20 @@ export function NoteEditor({ note, isLocked = false }: Props) {
         ))}
       </div>
 
-      {/* Editor */}
+      {/* Uploading Banner State */}
+      {isUploadingImage && (
+        <div className="px-6 py-2 bg-yellow-100 border-b-2 border-black flex items-center justify-between gap-2 text-xs font-bold text-neutral-900 animate-in fade-in duration-150">
+          <div className="flex items-center gap-2">
+            <CircleNotch size={16} weight="bold" className="animate-spin text-black shrink-0" />
+            <span>Sedang mengompresi gambar (WebP 80%) & mengunggah ke ImageKit...</span>
+          </div>
+          <span className="text-[10px] font-mono uppercase bg-black text-yellow-400 px-1.5 py-0.5">
+            Upload Aktif
+          </span>
+        </div>
+      )}
+
+      {/* Editor Content Area */}
       <EditorContent
         editor={editor}
         className="flex-1 px-6 py-4 overflow-y-auto [&_.tiptap]:min-h-[300px] [&_.tiptap]:outline-none"

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useEditor, EditorContent, type Content } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
-import Image from "@tiptap/extension-image";
+import { CustomImage } from "@/features/notes/extensions/custom-image-extension";
 import { Table } from "@tiptap/extension-table/table";
 import { TableRow } from "@tiptap/extension-table/row";
 import { TableHeader } from "@tiptap/extension-table/header";
@@ -60,7 +60,7 @@ const editorExtensions = [
     codeBlock: { HTMLAttributes: { class: "not-prose" } },
   }),
   Underline,
-  Image,
+  CustomImage,
   Table.configure({ resizable: true }),
   TableRow,
   TableHeader,

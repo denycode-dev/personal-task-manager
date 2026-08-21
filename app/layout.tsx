@@ -57,10 +57,12 @@ export const viewport: Viewport = {
 import { Providers } from "@/components/providers";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const imagekitUrlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT ?? "";
+
   return (
     <html lang="id" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers imagekitUrlEndpoint={imagekitUrlEndpoint}>{children}</Providers>
       </body>
     </html>
   );
