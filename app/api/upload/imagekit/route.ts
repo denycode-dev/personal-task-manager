@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getUploadAuthParams } from "@imagekit/next/server";
 import { uploadFile } from "@/lib/imagekit/upload";
+import { deleteFile, deleteFileByUrl } from "@/lib/imagekit/delete";
 import { MAX_FILE_SIZE_BYTES } from "@/config/app";
 
 export async function GET() {
@@ -62,4 +63,35 @@ export async function POST(request: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = await uploadFile(buffer, file.name, folder);
   return NextResponse.json(result);
+}
+
+export async function DELETE(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Akses ditolak." }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const fileId = searchParams.get("fileId");
+  const fileUrl = searchParams.get("fileUrl");
+
+  if (!fileId && !fileUrl) {
+    return NextResponse.json(
+      { error: "fileId atau fileUrl wajib disertakan." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    if (fileId) {
+      await deleteFile(fileId);
+    } else if (fileUrl) {
+      await deleteFileByUrl(fileUrl);
+    }
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    const errorMsg =
+      err instanceof Error ? err.message : "Gagal menghapus file dari ImageKit.";
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
+  }
 }

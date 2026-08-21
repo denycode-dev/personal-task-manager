@@ -166,18 +166,21 @@ export function NoteEditor({ note, isLocked = false }: Props) {
         });
 
         // 3. Sisipkan gambar ke editor Tiptap pada posisi kursor atau koordinat drop
+        const imageAttrs = {
+          src: uploaded.url,
+          alt: uploaded.name || "Gambar Catatan",
+          fileId: uploaded.fileId,
+          width: "100%",
+          alignment: "center",
+        };
+
         if (typeof position === "number") {
           editor
             .chain()
             .focus()
             .insertContentAt(position, {
               type: "image",
-              attrs: {
-                src: uploaded.url,
-                alt: uploaded.name || "Gambar Catatan",
-                width: "100%",
-                alignment: "center",
-              },
+              attrs: imageAttrs,
             })
             .run();
         } else {
@@ -186,12 +189,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
             .focus()
             .insertContent({
               type: "image",
-              attrs: {
-                src: uploaded.url,
-                alt: uploaded.name || "Gambar Catatan",
-                width: "100%",
-                alignment: "center",
-              },
+              attrs: imageAttrs,
             })
             .run();
         }

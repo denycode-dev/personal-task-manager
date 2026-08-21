@@ -23,6 +23,13 @@ export const CustomImage = Image.extend({
       title: {
         default: null,
       },
+      fileId: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-file-id") || null,
+        renderHTML: (attributes) => {
+          return attributes.fileId ? { "data-file-id": attributes.fileId } : {};
+        },
+      },
       width: {
         default: "100%",
         parseHTML: (element) =>

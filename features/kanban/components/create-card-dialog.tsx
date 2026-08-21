@@ -18,6 +18,7 @@ import { DeadlineBadge } from "@/features/deadlines/components/deadline-badge";
 import { AttachmentPreviewModal } from "@/features/kanban/components/attachment-preview-modal";
 import { createCardAction } from "@/features/kanban/actions/card.action";
 import { addCardAttachmentAction } from "@/features/kanban/actions/attachment.action";
+import { deleteImageKitFileAction, bulkDeleteImageKitFilesAction } from "@/lib/imagekit/actions";
 import { MAX_FILE_SIZE_BYTES } from "@/config/app";
 import { uploadClientFile } from "@/lib/imagekit/client-upload";
 import { toast } from "sonner";
@@ -135,8 +136,28 @@ function CreateCardForm({
     }
   };
 
-  const handleRemoveTempAttachment = (id: string) => {
+  const handleRemoveTempAttachment = (id: string, imagekitFileId: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
+    if (imagekitFileId) {
+      deleteImageKitFileAction(imagekitFileId).catch((err) => {
+        console.warn("Failed to delete removed attachment from ImageKit:", err);
+      });
+    }
+  };
+
+  const handleCancel = () => {
+    // Atomicity: Bersihkan berkas yang diunggah sementara ke ImageKit jika pembuatan kartu dibatalkan
+    if (attachments.length > 0) {
+      const fileIds = attachments
+        .map((a) => a.imagekitFileId)
+        .filter((fid): fid is string => Boolean(fid));
+      if (fileIds.length > 0) {
+        bulkDeleteImageKitFilesAction(fileIds).catch((err) => {
+          console.warn("Failed to cleanup unsubmitted attachments from ImageKit:", err);
+        });
+      }
+    }
+    onClose();
   };
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -192,6 +213,11 @@ function CreateCardForm({
         onCardCreated(createdCard, columnId);
         onClose();
       } else {
+        // Rollback: Hapus file dari ImageKit jika pembuatan kartu gagal di server
+        if (attachments.length > 0) {
+          const fileIds = attachments.map((a) => a.imagekitFileId);
+          bulkDeleteImageKitFilesAction(fileIds).catch(() => {});
+        }
         toast.error(result.error || "Gagal membuat kartu kanban.");
       }
     });
@@ -448,7 +474,7 @@ function CreateCardForm({
                       <button
                         suppressHydrationWarning
                         type="button"
-                        onClick={() => handleRemoveTempAttachment(att.id)}
+                        onClick={() => handleRemoveTempAttachment(att.id, att.imagekitFileId)}
                         className="p-1 text-neutral-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-black rounded transition-colors cursor-pointer"
                         title="Hapus lampiran"
                       >
@@ -467,7 +493,7 @@ function CreateCardForm({
           <button
             suppressHydrationWarning
             type="button"
-            onClick={onClose}
+            onClick={handleCancel}
             disabled={isPending || isUploading}
             className="px-4 py-2 text-xs font-bold border-2 border-black bg-neutral-100 hover:bg-neutral-200 cursor-pointer disabled:opacity-50"
           >

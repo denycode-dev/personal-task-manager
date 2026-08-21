@@ -9,10 +9,11 @@ import {
   TextAlignRight,
   ArrowSquareOut,
 } from "@phosphor-icons/react";
+import { deleteImageKitFileAction } from "@/lib/imagekit/actions";
 
 export function CustomImageNodeView(props: NodeViewProps) {
   const { node, updateAttributes, deleteNode, selected } = props;
-  const { src, alt, width = "100%", alignment = "center", caption = "" } = node.attrs;
+  const { src, alt, fileId, width = "100%", alignment = "center", caption = "" } = node.attrs;
 
   const [isHovered, setIsHovered] = useState(false);
 
@@ -24,6 +25,19 @@ export function CustomImageNodeView(props: NodeViewProps) {
       : alignment === "right"
       ? "items-end text-right"
       : "items-center text-center";
+
+  const handleDelete = () => {
+    // Hapus node dari editor dokumen
+    deleteNode();
+
+    // Hapus file secara permanen dari server ImageKit
+    const targetFile = fileId || src;
+    if (targetFile) {
+      deleteImageKitFileAction(targetFile).catch((err) => {
+        console.warn("Failed to delete image from ImageKit on node deletion:", err);
+      });
+    }
+  };
 
   return (
     <NodeViewWrapper className={`my-4 flex flex-col ${containerAlignClass} relative group`}>
@@ -118,8 +132,8 @@ export function CustomImageNodeView(props: NodeViewProps) {
             <button
               suppressHydrationWarning
               type="button"
-              onClick={deleteNode}
-              title="Hapus gambar dari catatan"
+              onClick={handleDelete}
+              title="Hapus gambar dari catatan dan ImageKit"
               className="p-1 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-transparent hover:border-rose-600 transition-colors cursor-pointer"
             >
               <Trash size={13} weight="bold" />
@@ -128,6 +142,7 @@ export function CustomImageNodeView(props: NodeViewProps) {
         )}
 
         {/* Image Content */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
           alt={alt || "Gambar Catatan"}

@@ -1,6 +1,8 @@
 import { noteRepository } from "@/features/notes/repositories/note.repository";
-import type { CreateNoteInput, UpdateNoteInput } from "@/features/notes/schemas/note.schema";
+import { deleteFiles, deleteFileByUrl, extractImageKitFilesFromContent } from "@/lib/imagekit/delete";
+import { logger } from "@/lib/logger";
 import { NotFoundError } from "@/lib/errors";
+import type { CreateNoteInput, UpdateNoteInput } from "@/features/notes/schemas/note.schema";
 import type { Note } from "@/lib/db/schema";
 
 export const noteService = {
@@ -47,6 +49,26 @@ export const noteService = {
   async delete(id: string): Promise<void> {
     const existing = await noteRepository.findById(id);
     if (!existing) throw new NotFoundError("Catatan tidak ditemukan.");
+
+    // 1. Ekstrak seluruh ImageKit fileId & URL dari konten catatan
+    const { fileIds, urls } = extractImageKitFilesFromContent(existing.content);
+
+    // 2. Hapus catatan dari database
     await noteRepository.delete(id);
+
+    // 3. Hapus seluruh berkas gambar ImageKit terkait dari server ImageKit
+    if (fileIds.length > 0) {
+      await deleteFiles(fileIds).catch((delErr) => {
+        logger.warn("Failed to delete Note ImageKit files by fileId", {
+          noteId: id,
+          fileIds,
+          error: delErr,
+        });
+      });
+    }
+
+    if (urls.length > 0) {
+      await Promise.allSettled(urls.map((u) => deleteFileByUrl(u)));
+    }
   },
 };
