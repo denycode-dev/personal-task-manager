@@ -10,6 +10,7 @@ import { NoteEditor } from "@/features/notes/components/note-editor";
 import { NoteFolderPicker } from "@/features/notes/components/note-folder-picker";
 import { NoteShareDialog } from "@/features/notes/components/note-share-dialog";
 import { NoteLockDialog } from "@/features/notes/components/note-lock-dialog";
+import { NoteDetailExportButton } from "@/features/notes/components/note-detail-export-button";
 import { DeleteConfirmButton } from "@/components/ui/delete-confirm-button";
 import { deleteNoteAction } from "@/features/notes/actions/delete-note.action";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
@@ -76,6 +77,14 @@ export default async function NotePage({ params }: NotePageProps) {
             noteId={id}
             currentFolderId={note.folderId}
             folders={folders}
+          />
+
+          <NoteDetailExportButton
+            title={note.title}
+            content={note.content}
+            folderName={folders.find((f) => f.id === note.folderId)?.name}
+            updatedAt={note.updatedAt}
+            isLocked={lockStatus.isLocked}
           />
 
           <NoteShareDialog

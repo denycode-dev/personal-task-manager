@@ -22,6 +22,17 @@ export const noteService = {
     });
   },
 
+  async createMany(inputs: CreateNoteInput[]): Promise<Note[]> {
+    if (inputs.length === 0) return [];
+    return noteRepository.createMany(
+      inputs.map((input) => ({
+        title: input.title,
+        content: input.content ?? null,
+        folderId: input.folderId ?? null,
+      }))
+    );
+  },
+
   async update(id: string, input: UpdateNoteInput): Promise<Note> {
     const existing = await noteRepository.findById(id);
     if (!existing) throw new NotFoundError("Catatan tidak ditemukan.");

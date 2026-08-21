@@ -31,6 +31,11 @@ export const noteRepository = {
     return note;
   },
 
+  async createMany(dataList: Omit<NewNote, "id" | "createdAt" | "updatedAt">[]): Promise<Note[]> {
+    if (dataList.length === 0) return [];
+    return db.insert(notes).values(dataList).returning();
+  },
+
   async update(id: string, data: Partial<NewNote>): Promise<Note | undefined> {
     const [note] = await db
       .update(notes)

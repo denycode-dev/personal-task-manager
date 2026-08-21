@@ -12,6 +12,10 @@ import type {
 } from "@/features/notes/types/note.types";
 import { deleteNoteAction } from "@/features/notes/actions/delete-note.action";
 import { DeleteConfirmButton } from "@/components/ui/delete-confirm-button";
+import { NoteImportDialog } from "@/features/notes/components/note-import-dialog";
+import { NoteExportDialog } from "@/features/notes/components/note-export-dialog";
+import { downloadSingleMarkdownNote } from "@/features/notes/utils/markdown-parser";
+import { toast } from "sonner";
 import {
   MagnifyingGlass,
   X,
@@ -26,6 +30,7 @@ import {
   Funnel,
   ArrowsDownUp,
   FolderSimple,
+  DownloadSimple,
 } from "@phosphor-icons/react";
 
 interface NotesExplorerProps {
@@ -194,13 +199,26 @@ export function NotesExplorer({
           </p>
         </div>
 
-        <Link
-          href="/notes/new"
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border-2 border-black bg-yellow-400 font-black text-xs sm:text-sm shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer shrink-0"
-        >
-          <Plus size={16} weight="bold" />
-          <span>Tulis Baru</span>
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <NoteImportDialog
+            folders={folders}
+            currentFolderId={selectedFolderId}
+          />
+          <NoteExportDialog
+            allNotes={initialNotes}
+            filteredNotes={filteredNotes}
+            folders={folders}
+            currentFolderId={selectedFolderId}
+            isFilterActive={isFilterActive}
+          />
+          <Link
+            href="/notes/new"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border-2 border-black bg-yellow-400 font-black text-xs sm:text-sm shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer shrink-0"
+          >
+            <Plus size={16} weight="bold" />
+            <span>Tulis Baru</span>
+          </Link>
+        </div>
       </div>
 
       {/* 2. Control Toolbar (Search, Filter, Sort, View Toggle) */}
@@ -521,6 +539,25 @@ export function NotesExplorer({
                           Publik
                         </span>
                       )}
+                      {!note.isLocked && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            downloadSingleMarkdownNote(note.title, note.content, {
+                              folderName: folder?.name,
+                              updatedAt: note.updatedAt,
+                              includeFrontmatter: true,
+                            });
+                            toast.success(`Catatan "${note.title || "Catatan"}" berhasil diekspor ke Markdown!`);
+                          }}
+                          className="p-1 text-muted-foreground hover:text-black hover:bg-lime-200 border border-transparent hover:border-black rounded-xs transition-colors inline-flex items-center justify-center cursor-pointer"
+                          title="Ekspor catatan ini ke Markdown (.md)"
+                        >
+                          <DownloadSimple size={14} weight="bold" />
+                        </button>
+                      )}
                       <DeleteConfirmButton
                         action={deleteNoteAction.bind(null, note.id)}
                         confirmTitle="Hapus Catatan"
@@ -680,6 +717,26 @@ export function NotesExplorer({
                       <span>Buka</span>
                       <ArrowRight size={12} weight="bold" />
                     </Link>
+
+                    {!note.isLocked && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          downloadSingleMarkdownNote(note.title, note.content, {
+                            folderName: folder?.name,
+                            updatedAt: note.updatedAt,
+                            includeFrontmatter: true,
+                          });
+                          toast.success(`Catatan "${note.title || "Catatan"}" berhasil diekspor ke Markdown!`);
+                        }}
+                        className="p-1.5 text-muted-foreground hover:text-black hover:bg-lime-200 border border-black/20 hover:border-black rounded-xs transition-colors inline-flex items-center justify-center cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] bg-white"
+                        title="Ekspor catatan ini ke Markdown (.md)"
+                      >
+                        <DownloadSimple size={13} weight="bold" />
+                      </button>
+                    )}
 
                     <DeleteConfirmButton
                       action={deleteNoteAction.bind(null, note.id)}
