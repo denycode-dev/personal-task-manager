@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { notes, type Note, type NewNote } from "@/lib/db/schema";
-import { eq, desc, isNull } from "drizzle-orm";
+import { eq, desc, isNull, and, sql } from "drizzle-orm";
 
 export const noteRepository = {
   async findAll(folderId?: string | null): Promise<Note[]> {
@@ -39,8 +39,34 @@ export const noteRepository = {
   async update(id: string, data: Partial<NewNote>): Promise<Note | undefined> {
     const [note] = await db
       .update(notes)
-      .set({ ...data, updatedAt: new Date() })
+      .set({
+        ...data,
+        version: sql`${notes.version} + 1`,
+        updatedAt: new Date(),
+      })
       .where(eq(notes.id, id))
+      .returning();
+    return note;
+  },
+
+  /**
+   * Optimistic Concurrency Control (OCC) update.
+   * Hanya berhasil jika version catatan di database masih sama persis dengan expectedVersion.
+   * Mencegah "Lost Update" saat banyak pengguna mengedit catatan bersamaan.
+   */
+  async updateWithVersion(
+    id: string,
+    expectedVersion: number,
+    data: Partial<NewNote>
+  ): Promise<Note | undefined> {
+    const [note] = await db
+      .update(notes)
+      .set({
+        ...data,
+        version: sql`${notes.version} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(notes.id, id), eq(notes.version, expectedVersion)))
       .returning();
     return note;
   },

@@ -79,6 +79,7 @@ export default async function PublicNotePage({ params }: PublicNotePageProps) {
       slug={slug}
       title={data.note.title}
       initialContent={data.note.content}
+      initialVersion={data.note.version}
       isLocked={data.isLocked}
       isEditable={data.isEditable}
       updatedAt={data.note.updatedAt}

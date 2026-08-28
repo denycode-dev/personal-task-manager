@@ -9,6 +9,7 @@ export interface PublicNoteItem {
   id: string;
   title: string;
   content: unknown | null;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,41 +65,27 @@ export function extractNoteExcerpt(
       return;
     }
 
-    const record = node as Record<string, unknown>;
-
-    if (record.type === "text" && typeof record.text === "string") {
-      const segment = record.text.trim();
-      if (segment) {
-        text += (text.length > 0 ? " " : "") + segment;
-      }
+    const obj = node as Record<string, unknown>;
+    if (typeof obj.text === "string") {
+      text += (text ? " " : "") + obj.text;
     }
 
-    if (Array.isArray(record.content)) {
-      extractRecursive(record.content);
+    if (Array.isArray(obj.content)) {
+      for (const child of obj.content) {
+        extractRecursive(child);
+      }
     }
   };
 
-  if (typeof content === "string") {
-    try {
-      const parsed = JSON.parse(content);
-      extractRecursive(parsed);
-    } catch {
-      text = content.replace(/<[^>]*>?/gm, "").trim();
-    }
-  } else {
-    extractRecursive(content);
-  }
+  extractRecursive(content);
 
-  const normalized = text.replace(/\s+/g, " ").trim();
-  if (!normalized) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) {
     return "Catatan publik yang dibagikan melalui Denycode Task Manager.";
   }
 
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, maxLength).trim()}...`;
+  if (clean.length <= maxLength) return clean;
+  return clean.slice(0, maxLength).trim() + "…";
 }
 
 export const noteShareService = {
@@ -166,6 +153,7 @@ export const noteShareService = {
         id: note.id,
         title: note.title,
         content: lock ? null : note.content,
+        version: note.version ?? 1,
         createdAt: note.createdAt,
         updatedAt: note.updatedAt,
       },

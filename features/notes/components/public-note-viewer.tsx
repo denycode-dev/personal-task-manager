@@ -24,6 +24,10 @@ import {
   Check,
   CircleNotch,
   ArrowsClockwise,
+  GitMerge,
+  Lightning,
+  DownloadSimple,
+  WarningOctagon,
 } from "@phosphor-icons/react";
 import { unlockNoteAction } from "@/features/notes/actions/lock-note.action";
 import {
@@ -47,9 +51,17 @@ interface PublicNoteViewerProps {
   slug: string;
   title: string;
   initialContent: unknown | null;
+  initialVersion?: number;
   isLocked: boolean;
   isEditable?: boolean;
   updatedAt: Date;
+}
+
+interface ConflictInfo {
+  serverVersion: number;
+  serverUpdatedAt: Date;
+  serverContent: unknown | null;
+  localDraft: unknown;
 }
 
 type ToolbarBtn = {
@@ -60,7 +72,7 @@ type ToolbarBtn = {
 };
 
 const STORAGE_KEY = "denycode_public_reader_prefs_v1";
-const OPTIMAL_SYNC_INTERVAL_MS = 4000; // 4 detik: optimal untuk real-time polling tanpa membebani database
+const OPTIMAL_SYNC_INTERVAL_MS = 4000; // 4 detik: interval optimal real-time polling tanpa membebani server/database
 
 function parseNoteContent(raw: unknown): Content {
   if (!raw) return "";
@@ -72,6 +84,48 @@ function parseNoteContent(raw: unknown): Content {
     }
   }
   return raw as Content;
+}
+
+/**
+ * Menggabungkan dokumen Tiptap secara non-destruktif untuk menghindari kehilangan data (Zero Data Loss).
+ */
+function mergeTiptapContents(serverContent: unknown, localDraft: unknown): unknown {
+  const parse = (c: unknown): { type?: string; content?: unknown[] } => {
+    if (!c) return { type: "doc", content: [] };
+    if (typeof c === "string") {
+      try {
+        return JSON.parse(c);
+      } catch {
+        return {
+          type: "doc",
+          content: [{ type: "paragraph", content: [{ type: "text", text: c }] }],
+        };
+      }
+    }
+    return c as { type?: string; content?: unknown[] };
+  };
+
+  const sDoc = parse(serverContent);
+  const lDoc = parse(localDraft);
+
+  const sNodes = Array.isArray(sDoc.content) ? sDoc.content : [];
+  const lNodes = Array.isArray(lDoc.content) ? lDoc.content : [];
+
+  const dividerNode = {
+    type: "paragraph",
+    content: [
+      {
+        type: "text",
+        text: "——— [Draf Tambahan Penggabungan Bersama] ———",
+        marks: [{ type: "bold" }],
+      },
+    ],
+  };
+
+  return {
+    type: "doc",
+    content: [...sNodes, dividerNode, ...lNodes],
+  };
 }
 
 const editorExtensions = [
@@ -91,11 +145,15 @@ export function PublicNoteViewer({
   slug,
   title,
   initialContent,
+  initialVersion = 1,
   isLocked,
   isEditable = false,
   updatedAt,
 }: PublicNoteViewerProps) {
   const [content, setContent] = useState<unknown | null>(initialContent);
+  const [currentVersion, setCurrentVersion] = useState<number>(initialVersion);
+  const currentVersionRef = useRef<number>(initialVersion);
+
   const [password, setPassword] = useState("");
   const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -112,6 +170,9 @@ export function PublicNoteViewer({
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasRemoteChanges, setHasRemoteChanges] = useState(false);
   const [pendingRemoteContent, setPendingRemoteContent] = useState<unknown | null>(null);
+
+  // Optimistic Concurrency Control conflict modal state
+  const [conflictData, setConflictData] = useState<ConflictInfo | null>(null);
 
   const lastUserTypingTimeRef = useRef<number>(0);
   const isRemoteApplyingRef = useRef<boolean>(false);
@@ -169,32 +230,63 @@ export function PublicNoteViewer({
     return extractTableOfContents(unlocked ? content : null);
   }, [unlocked, content]);
 
-  // Debounced auto-save function
+  // Debounced auto-save function dengan Optimistic Concurrency Control (OCC)
   const triggerSave = useCallback(
-    (newContent: unknown) => {
+    (
+      newContent: unknown,
+      options?: { force?: boolean; baseVersion?: number }
+    ) => {
       if (!isEditable) return;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       setSaveState("saving");
 
-      saveTimerRef.current = setTimeout(() => {
+      const force = options?.force ?? false;
+      const targetVersion = options?.baseVersion ?? currentVersionRef.current;
+
+      const executeSave = () => {
         startTransition(async () => {
           const res = await savePublicNoteAction({
             slug,
             noteId,
             content: newContent,
+            baseVersion: targetVersion,
+            force,
             password: sessionPassword ?? undefined,
           });
 
           if (res.success) {
-            setSaveState("saved");
-            setContent(newContent);
-            setLastSyncedUpdatedAt(new Date(res.data.updatedAt));
+            if (res.data.saved) {
+              setSaveState("saved");
+              setContent(newContent);
+              setCurrentVersion(res.data.version);
+              currentVersionRef.current = res.data.version;
+              setLastSyncedUpdatedAt(new Date(res.data.updatedAt));
+              setConflictData(null);
+            } else if (res.data.conflict) {
+              // Terjadi bentrokan OCC: pengguna lain telah memperbarui catatan
+              setSaveState("error");
+              setConflictData({
+                serverVersion: res.data.serverVersion,
+                serverUpdatedAt: new Date(res.data.serverUpdatedAt),
+                serverContent: res.data.serverContent,
+                localDraft: newContent,
+              });
+              toast.warning(
+                "Konflik terdeteksi: Pengguna lain telah memperbarui catatan ini terlebih dahulu."
+              );
+            }
           } else {
             setSaveState("error");
             toast.error(res.error ?? "Gagal menyimpan perubahan catatan.");
           }
         });
-      }, 800);
+      };
+
+      if (force) {
+        executeSave();
+      } else {
+        saveTimerRef.current = setTimeout(executeSave, 800);
+      }
     },
     [isEditable, slug, noteId, sessionPassword]
   );
@@ -224,7 +316,7 @@ export function PublicNoteViewer({
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
   }, []);
 
-  // Multi-user periodic sync function
+  // Multi-user periodic sync function (OCC-aware)
   const performSync = useCallback(
     async (forceApply: boolean = false) => {
       if (isLocked && !unlocked) return;
@@ -235,6 +327,7 @@ export function PublicNoteViewer({
         const res = await syncPublicNoteAction({
           slug,
           noteId,
+          lastVersion: currentVersionRef.current,
           lastUpdatedAt: lastSyncedUpdatedAt,
           password: sessionPassword ?? undefined,
         });
@@ -242,13 +335,16 @@ export function PublicNoteViewer({
         if (res.success && res.data.isUpdated && res.data.content !== undefined) {
           const newContent = res.data.content;
           const newDate = new Date(res.data.updatedAt);
+          const newVersion = res.data.version;
 
           const currentJSON = editor ? JSON.stringify(editor.getJSON()) : "";
           const newJSON = JSON.stringify(newContent);
 
-          // Jika isinya persis sama, hanya perbarui timestamp
+          // Jika isinya persis sama, hanya perbarui version & timestamp
           if (currentJSON === newJSON) {
             setLastSyncedUpdatedAt(newDate);
+            setCurrentVersion(newVersion);
+            currentVersionRef.current = newVersion;
             setHasRemoteChanges(false);
             setPendingRemoteContent(null);
             return;
@@ -267,13 +363,14 @@ export function PublicNoteViewer({
             // Tahan dan tampilkan banner notifikasi agar kursor dan ketikan pengguna tidak terganggu
             setHasRemoteChanges(true);
             setPendingRemoteContent(newContent);
-            setLastSyncedUpdatedAt(newDate);
           } else {
             // Terapkan sinkronisasi langsung
             isRemoteApplyingRef.current = true;
             const parsed = parseNoteContent(newContent);
             editor?.commands.setContent(parsed as Content);
             setContent(parsed);
+            setCurrentVersion(newVersion);
+            currentVersionRef.current = newVersion;
             setLastSyncedUpdatedAt(newDate);
             setHasRemoteChanges(false);
             setPendingRemoteContent(null);
@@ -282,6 +379,10 @@ export function PublicNoteViewer({
           }
         } else if (res.success && !res.data.isUpdated) {
           setLastSyncedUpdatedAt(new Date(res.data.updatedAt));
+          if (res.data.version) {
+            setCurrentVersion(res.data.version);
+            currentVersionRef.current = res.data.version;
+          }
         }
       } catch {
         // Polling background gagal diam tanpa mengganggu pengguna
@@ -359,6 +460,44 @@ export function PublicNoteViewer({
   const handleManualSync = () => {
     performSync(true);
     toast.success("Menyinkronkan data...");
+  };
+
+  // Conflict Resolution Handlers
+  const handleResolveMerge = () => {
+    if (!conflictData) return;
+    const merged = mergeTiptapContents(conflictData.serverContent, conflictData.localDraft);
+    isRemoteApplyingRef.current = true;
+    const parsed = parseNoteContent(merged);
+    editor?.commands.setContent(parsed as Content);
+    setContent(parsed);
+    isRemoteApplyingRef.current = false;
+
+    // Simpan versi gabungan ke server menggunakan baseVersion dari server
+    triggerSave(merged, { force: false, baseVersion: conflictData.serverVersion });
+    setConflictData(null);
+    toast.success("Draf Anda dan perubahan server berhasil digabungkan!");
+  };
+
+  const handleResolveForceOverwrite = () => {
+    if (!conflictData) return;
+    triggerSave(conflictData.localDraft, { force: true });
+    setConflictData(null);
+    toast.info("Menyimpan draf lokal Anda sebagai versi terbaru...");
+  };
+
+  const handleResolveUseServer = () => {
+    if (!conflictData) return;
+    isRemoteApplyingRef.current = true;
+    const parsed = parseNoteContent(conflictData.serverContent);
+    editor?.commands.setContent(parsed as Content);
+    setContent(parsed);
+    setCurrentVersion(conflictData.serverVersion);
+    currentVersionRef.current = conflictData.serverVersion;
+    setLastSyncedUpdatedAt(new Date(conflictData.serverUpdatedAt));
+    setConflictData(null);
+    setSaveState("saved");
+    isRemoteApplyingRef.current = false;
+    toast.info("Versi terbaru dari server berhasil dimuat.");
   };
 
   // Track Reading Progress Bar & Scroll-to-top button
@@ -623,7 +762,7 @@ export function PublicNoteViewer({
         <header className="border-b-2 border-black bg-white px-4 sm:px-6 py-3 sticky top-0 z-30 print:hidden shadow-xs">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-black uppercase bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-black uppercase bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,1)]">
                 <Sparkle size={13} weight="fill" />
                 Denycode
               </span>
@@ -633,12 +772,12 @@ export function PublicNoteViewer({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              {/* Multi-user live sync indicator */}
+              {/* Multi-user live sync indicator with version tag */}
               {unlocked && (
                 <button
                   type="button"
                   onClick={handleManualSync}
-                  title="Sinkronisasi multi-pengguna aktif setiap 4 detik. Klik untuk menyinkronkan sekarang."
+                  title={`Sinkronisasi multi-pengguna aktif setiap 4 detik. Versi saat ini: v${currentVersion}. Klik untuk menyinkronkan sekarang.`}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono border-2 border-black bg-white hover:bg-neutral-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-transform hover:-translate-y-0.5"
                 >
                   <span className="relative flex h-2 w-2">
@@ -651,7 +790,10 @@ export function PublicNoteViewer({
                     className={isSyncing ? "animate-spin text-black" : "text-neutral-700"}
                   />
                   <span className="text-[11px] font-black text-black">
-                    {isSyncing ? "Menyinkronkan..." : "Sync 4d"}
+                    {isSyncing ? "Menyinkronkan..." : `Sync 4d`}
+                  </span>
+                  <span className="bg-neutral-200 text-neutral-800 text-[10px] font-bold px-1 rounded-none border border-neutral-400">
+                    v{currentVersion}
                   </span>
                 </button>
               )}
@@ -665,7 +807,10 @@ export function PublicNoteViewer({
                       <span className="text-neutral-700 font-bold text-[11px]">Menyimpan…</span>
                     </>
                   ) : saveState === "error" ? (
-                    <span className="text-rose-600 font-black text-[11px]">⚠ Gagal menyimpan</span>
+                    <span className="text-rose-600 font-black text-[11px] flex items-center gap-1">
+                      <WarningOctagon size={13} weight="bold" />
+                      {conflictData ? "Konflik Edit" : "Gagal menyimpan"}
+                    </span>
                   ) : (
                     <>
                       <Check size={13} weight="bold" className="text-emerald-700" />
@@ -749,8 +894,8 @@ export function PublicNoteViewer({
           </div>
         )}
 
-        {/* Remote Changes Alert Banner */}
-        {hasRemoteChanges && (
+        {/* Remote Changes Alert Banner (Saat user sedang mengetik) */}
+        {hasRemoteChanges && !conflictData && (
           <div className="mb-3 p-3 bg-yellow-200 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center gap-2 text-xs font-bold text-black">
               <ArrowsClockwise size={16} weight="bold" className="animate-spin text-black shrink-0" />
@@ -763,6 +908,86 @@ export function PublicNoteViewer({
             >
               Terapkan Perubahan
             </button>
+          </div>
+        )}
+
+        {/* Conflict Resolution Modal (Optimistic Concurrency Control Triggered) */}
+        {conflictData && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-lg w-full p-6 text-black space-y-5">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-300 border-2 border-black font-black text-xs uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  <WarningOctagon size={16} weight="fill" />
+                  Konflik Multi-User Terdeteksi
+                </div>
+                <h3 className="text-xl font-black tracking-tight">
+                  Catatan Telah Diperbarui Pengguna Lain
+                </h3>
+                <p className="text-xs text-neutral-700 leading-relaxed">
+                  Pengguna lain baru saja menyimpan versi yang lebih baru (v{conflictData.serverVersion}) pada saat Anda sedang mengedit.
+                  Ketikkan Anda di draf lokal tetap aman. Silakan pilih cara penanganan:
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {/* 1. Gabungkan Konten (Non-Destructive Smart Merge) */}
+                <button
+                  type="button"
+                  onClick={handleResolveMerge}
+                  className="w-full text-left p-3.5 border-2 border-black bg-emerald-100 hover:bg-emerald-200 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 flex items-start gap-3 cursor-pointer"
+                >
+                  <GitMerge size={22} weight="bold" className="text-emerald-900 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-black text-xs text-emerald-950 flex items-center gap-1.5">
+                      Gabungkan Konten Otomatis
+                      <span className="bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 font-bold uppercase">
+                        Zero Data Loss
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-emerald-900 mt-0.5">
+                      Menyisipkan draf lokal Anda di bagian bawah pembaruan server dengan pemisah yang rapi. Tidak ada kata yang hilang!
+                    </div>
+                  </div>
+                </button>
+
+                {/* 2. Gunakan Versi Server */}
+                <button
+                  type="button"
+                  onClick={handleResolveUseServer}
+                  className="w-full text-left p-3.5 border-2 border-black bg-neutral-100 hover:bg-neutral-200 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 flex items-start gap-3 cursor-pointer"
+                >
+                  <DownloadSimple size={22} weight="bold" className="text-neutral-800 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-black text-xs text-neutral-900">
+                      Gunakan Versi Server (v{conflictData.serverVersion})
+                    </div>
+                    <div className="text-[11px] text-neutral-600 mt-0.5">
+                      Menerapkan perubahan dari pengguna lain dan membatalkan draf lokal Anda.
+                    </div>
+                  </div>
+                </button>
+
+                {/* 3. Paksa Simpan Versi Saya */}
+                <button
+                  type="button"
+                  onClick={handleResolveForceOverwrite}
+                  className="w-full text-left p-3.5 border-2 border-black bg-rose-100 hover:bg-rose-200 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 flex items-start gap-3 cursor-pointer"
+                >
+                  <Lightning size={22} weight="bold" className="text-rose-900 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-black text-xs text-rose-950 flex items-center gap-1.5">
+                      Timpa dengan Draf Saya
+                      <span className="bg-rose-600 text-white text-[10px] px-1.5 py-0.5 font-bold uppercase">
+                        Override
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-rose-900 mt-0.5">
+                      Menyimpan draf lokal Anda secara paksa dan menimpa perubahan server.
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -976,7 +1201,7 @@ export function PublicNoteViewer({
             <p>Denycode Task Manager • Personal productivity workspace</p>
             <p className="text-[11px] text-neutral-500">
               {isEditable
-                ? "Kolaborasi catatan publik yang aman, terenkripsi, dan sinkron otomatis"
+                ? "Kolaborasi catatan publik aman dengan Optimistic Concurrency Control (OCC)"
                 : "Membaca nyaman dan bebas distraksi"}
             </p>
           </div>
