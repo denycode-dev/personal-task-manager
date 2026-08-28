@@ -76,9 +76,11 @@ export default async function PublicNotePage({ params }: PublicNotePageProps) {
   return (
     <PublicNoteViewer
       noteId={data.note.id}
+      slug={slug}
       title={data.note.title}
       initialContent={data.note.content}
       isLocked={data.isLocked}
+      isEditable={data.isEditable}
       updatedAt={data.note.updatedAt}
     />
   );

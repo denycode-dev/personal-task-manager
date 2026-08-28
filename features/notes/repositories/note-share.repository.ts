@@ -27,4 +27,13 @@ export const noteShareRepository = {
   async delete(noteId: string): Promise<void> {
     await db.delete(noteShares).where(eq(noteShares.noteId, noteId));
   },
+
+  async update(noteId: string, data: Partial<NewNoteShare>): Promise<NoteShare | undefined> {
+    const [share] = await db
+      .update(noteShares)
+      .set(data)
+      .where(eq(noteShares.noteId, noteId))
+      .returning();
+    return share;
+  },
 };

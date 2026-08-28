@@ -16,12 +16,14 @@ export interface PublicNoteItem {
 export interface PublicNoteData {
   note: PublicNoteItem;
   isLocked: boolean;
+  isEditable: boolean;
   slug: string;
 }
 
 export interface NoteShareStatus {
   isShared: boolean;
   publicSlug: string | null;
+  isEditable: boolean;
 }
 
 function generateSlug(length: number = 10): string {
@@ -105,25 +107,41 @@ export const noteShareService = {
     return {
       isShared: !!share,
       publicSlug: share?.publicSlug ?? null,
+      isEditable: share?.isEditable ?? false,
     };
   },
 
-  async enableShare(noteId: string): Promise<{ publicSlug: string }> {
+  async enableShare(
+    noteId: string,
+    isEditable: boolean = false
+  ): Promise<{ publicSlug: string; isEditable: boolean }> {
     const note = await noteRepository.findById(noteId);
     if (!note) throw new NotFoundError("Catatan tidak ditemukan.");
 
     const existing = await noteShareRepository.findByNoteId(noteId);
     if (existing) {
-      return { publicSlug: existing.publicSlug };
+      return { publicSlug: existing.publicSlug, isEditable: existing.isEditable };
     }
 
     const publicSlug = generateSlug(10);
     const created = await noteShareRepository.create({
       noteId,
       publicSlug,
+      isEditable,
     });
 
-    return { publicSlug: created.publicSlug };
+    return { publicSlug: created.publicSlug, isEditable: created.isEditable };
+  },
+
+  async updateSharePermission(
+    noteId: string,
+    isEditable: boolean
+  ): Promise<{ isEditable: boolean }> {
+    const existing = await noteShareRepository.findByNoteId(noteId);
+    if (!existing) throw new NotFoundError("Tautan share belum aktif.");
+
+    const updated = await noteShareRepository.update(noteId, { isEditable });
+    return { isEditable: updated?.isEditable ?? isEditable };
   },
 
   async disableShare(noteId: string): Promise<void> {
@@ -152,6 +170,7 @@ export const noteShareService = {
         updatedAt: note.updatedAt,
       },
       isLocked: !!lock,
+      isEditable: share.isEditable ?? false,
       slug,
     };
   }),

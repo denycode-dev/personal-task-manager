@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, useTransition } from "react";
 import { useEditor, EditorContent, type Content } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -19,8 +19,13 @@ import {
   Sparkle,
   EyeSlash,
   ArrowUp,
+  PencilSimple,
+  BookOpen,
+  Check,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import { unlockNoteAction } from "@/features/notes/actions/lock-note.action";
+import { savePublicNoteAction } from "@/features/notes/actions/save-public-note.action";
 import { toast } from "sonner";
 import { ReadingToolbar } from "@/features/notes/components/reading-toolbar";
 import { TableOfContentsModal } from "@/features/notes/components/table-of-contents-modal";
@@ -35,11 +40,20 @@ import {
 
 interface PublicNoteViewerProps {
   noteId: string;
+  slug: string;
   title: string;
   initialContent: unknown | null;
   isLocked: boolean;
+  isEditable?: boolean;
   updatedAt: Date;
 }
+
+type ToolbarBtn = {
+  label: React.ReactNode;
+  title: string;
+  action: () => void;
+  active?: boolean;
+};
 
 const STORAGE_KEY = "denycode_public_reader_prefs_v1";
 
@@ -69,15 +83,24 @@ const editorExtensions = [
 
 export function PublicNoteViewer({
   noteId,
+  slug,
   title,
   initialContent,
   isLocked,
+  isEditable = false,
   updatedAt,
 }: PublicNoteViewerProps) {
   const [content, setContent] = useState<unknown | null>(initialContent);
   const [password, setPassword] = useState("");
+  const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlocked, setUnlocked] = useState(!isLocked);
+
+  // Edit / Read view mode when editable is true
+  const [activeViewMode, setActiveViewMode] = useState<"edit" | "read">("edit");
+  const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [, startTransition] = useTransition();
 
   // Reader Preferences State
   const [preferences, setPreferences] = useState<ReaderPreferences>(() => {
@@ -111,7 +134,8 @@ export function PublicNoteViewer({
       setPreferences((prev) => {
         const next = { ...prev, ...updates };
         try {
-          const { focusMode: _focusMode, ...toPersist } = next;
+          const toPersist = { ...next };
+          delete (toPersist as Partial<ReaderPreferences>).focusMode;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
         } catch {
           // Ignore
@@ -131,12 +155,57 @@ export function PublicNoteViewer({
     return extractTableOfContents(unlocked ? content : null);
   }, [unlocked, content]);
 
+  // Debounced auto-save function
+  const triggerSave = useCallback(
+    (newContent: unknown) => {
+      if (!isEditable) return;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      setSaveState("saving");
+
+      saveTimerRef.current = setTimeout(() => {
+        startTransition(async () => {
+          const res = await savePublicNoteAction({
+            slug,
+            noteId,
+            content: newContent,
+            password: sessionPassword ?? undefined,
+          });
+
+          if (res.success) {
+            setSaveState("saved");
+            setContent(newContent);
+          } else {
+            setSaveState("error");
+            toast.error(res.error ?? "Gagal menyimpan perubahan catatan.");
+          }
+        });
+      }, 800);
+    },
+    [isEditable, slug, noteId, sessionPassword]
+  );
+
   const editor = useEditor({
     extensions: editorExtensions,
     content: parseNoteContent(initialContent),
-    editable: false,
+    editable: isEditable && unlocked && activeViewMode === "edit",
+    onUpdate({ editor: currentEditor }) {
+      if (!isEditable) return;
+      triggerSave(currentEditor.getJSON());
+    },
     immediatelyRender: false,
   });
+
+  // Keep editor editable property synchronized
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(isEditable && unlocked && activeViewMode === "edit");
+    }
+  }, [editor, isEditable, unlocked, activeViewMode]);
+
+  // Cleanup auto-save timer on unmount
+  useEffect(() => () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+  }, []);
 
   // Track Reading Progress Bar & Scroll-to-top button
   useEffect(() => {
@@ -194,7 +263,6 @@ export function PublicNoteViewer({
   const handleCopyText = async () => {
     if (!unlocked) {
       toast.error("Catatan terkunci belum dapat disalin.");
-      return;
     }
 
     try {
@@ -234,7 +302,7 @@ export function PublicNoteViewer({
       try {
         await navigator.share(shareData);
       } catch {
-        // User cancelled or error
+        // User cancelled
       }
     } else {
       try {
@@ -282,8 +350,12 @@ export function PublicNoteViewer({
       if (res.success) {
         const parsed = parseNoteContent(res.data.content);
         setContent(parsed);
+        setSessionPassword(password);
         setUnlocked(true);
         editor?.commands.setContent(parsed as Content);
+        if (isEditable) {
+          editor?.setEditable(activeViewMode === "edit");
+        }
         toast.success("Catatan berhasil didekripsi!");
       } else {
         toast.error(res.error ?? "Password catatan salah.");
@@ -336,6 +408,47 @@ export function PublicNoteViewer({
     dark: "bg-[#09090b] text-neutral-100",
   }[preferences.theme];
 
+  // Formatting Toolbar Buttons for Edit Mode
+  const toolbarGroups: ToolbarBtn[][] = [
+    // Text formatting
+    [
+      { label: "B", title: "Tebal (Bold)", action: () => editor?.chain().focus().toggleBold().run(), active: editor?.isActive("bold") },
+      { label: "I", title: "Miring (Italic)", action: () => editor?.chain().focus().toggleItalic().run(), active: editor?.isActive("italic") },
+      { label: "U", title: "Garis Bawah (Underline)", action: () => editor?.chain().focus().toggleUnderline().run(), active: editor?.isActive("underline") },
+      { label: "S", title: "Coret (Strikethrough)", action: () => editor?.chain().focus().toggleStrike().run(), active: editor?.isActive("strike") },
+    ],
+    // Headings
+    [
+      { label: "H1", title: "Heading 1", action: () => editor?.chain().focus().toggleHeading({ level: 1 }).run(), active: editor?.isActive("heading", { level: 1 }) },
+      { label: "H2", title: "Heading 2", action: () => editor?.chain().focus().toggleHeading({ level: 2 }).run(), active: editor?.isActive("heading", { level: 2 }) },
+      { label: "H3", title: "Heading 3", action: () => editor?.chain().focus().toggleHeading({ level: 3 }).run(), active: editor?.isActive("heading", { level: 3 }) },
+    ],
+    // Lists
+    [
+      { label: "• List", title: "Daftar Poin", action: () => editor?.chain().focus().toggleBulletList().run(), active: editor?.isActive("bulletList") },
+      { label: "1. List", title: "Daftar Nomor", action: () => editor?.chain().focus().toggleOrderedList().run(), active: editor?.isActive("orderedList") },
+    ],
+    // Blocks
+    [
+      { label: "❝", title: "Kutipan (Blockquote)", action: () => editor?.chain().focus().toggleBlockquote().run(), active: editor?.isActive("blockquote") },
+      { label: "</>", title: "Blok Kode", action: () => editor?.chain().focus().toggleCodeBlock().run(), active: editor?.isActive("codeBlock") },
+      { label: "code", title: "Kode Sebaris", action: () => editor?.chain().focus().toggleCode().run(), active: editor?.isActive("code") },
+    ],
+    // Table
+    [
+      { label: "⊞ Tabel", title: "Sisipkan tabel 3×3", action: () => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+      { label: "+ Kolom", title: "Tambah kolom", action: () => editor?.chain().focus().addColumnAfter().run() },
+      { label: "+ Baris", title: "Tambah baris", action: () => editor?.chain().focus().addRowAfter().run() },
+      { label: "✕ Tabel", title: "Hapus tabel", action: () => editor?.chain().focus().deleteTable().run() },
+    ],
+    // Misc
+    [
+      { label: "—", title: "Garis horizontal", action: () => editor?.chain().focus().setHorizontalRule().run() },
+      { label: "↩", title: "Batal (Undo)", action: () => editor?.chain().focus().undo().run() },
+      { label: "↪", title: "Ulangi (Redo)", action: () => editor?.chain().focus().redo().run() },
+    ],
+  ];
+
   return (
     <div
       ref={viewerContainerRef}
@@ -354,7 +467,7 @@ export function PublicNoteViewer({
       {/* 2. Public Header (Hidden in Focus Mode or Print) */}
       {!preferences.focusMode && (
         <header className="border-b-2 border-black bg-white px-4 sm:px-6 py-3 sticky top-0 z-30 print:hidden shadow-xs">
-          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-black uppercase bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                 <Sparkle size={13} weight="fill" />
@@ -365,21 +478,79 @@ export function PublicNoteViewer({
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              {scrollProgress > 0 && (
-                <span className="hidden md:inline-flex text-[11px] font-bold text-neutral-600 px-2 py-0.5 bg-neutral-100 border border-neutral-300">
-                  {Math.round(scrollProgress)}% terbaca
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Auto-save status indicator if in editable mode */}
+              {isEditable && unlocked && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono border border-black/30 bg-neutral-50 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                  {saveState === "saving" ? (
+                    <>
+                      <CircleNotch size={13} weight="bold" className="animate-spin text-neutral-800" />
+                      <span className="text-neutral-700 font-bold text-[11px]">Menyimpan…</span>
+                    </>
+                  ) : saveState === "error" ? (
+                    <span className="text-rose-600 font-black text-[11px]">⚠ Gagal menyimpan</span>
+                  ) : (
+                    <>
+                      <Check size={13} weight="bold" className="text-emerald-700" />
+                      <span className="text-emerald-800 font-bold text-[11px]">Tersimpan</span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Mode Switcher Pill (Edit vs Baca) if editable & unlocked */}
+              {isEditable && unlocked && (
+                <div className="inline-flex border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-neutral-100 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveViewMode("edit");
+                      editor?.setEditable(true);
+                    }}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-black transition-all cursor-pointer ${
+                      activeViewMode === "edit"
+                        ? "bg-emerald-300 text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                        : "text-neutral-700 hover:text-black"
+                    }`}
+                  >
+                    <PencilSimple size={13} weight="bold" />
+                    <span>Mode Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveViewMode("read");
+                      editor?.setEditable(false);
+                    }}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-black transition-all cursor-pointer ${
+                      activeViewMode === "read"
+                        ? "bg-yellow-300 text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                        : "text-neutral-700 hover:text-black"
+                    }`}
+                  >
+                    <BookOpen size={13} weight="bold" />
+                    <span>Mode Baca</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Badge Izin Akses */}
+              {isEditable ? (
+                <span className="text-[11px] font-black text-black px-2.5 py-1 bg-emerald-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1">
+                  <PencilSimple size={13} weight="bold" />
+                  <span>Bisa Diedit</span>
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold text-neutral-800 px-2.5 py-1 bg-yellow-100 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                  Catatan Publik (Hanya Baca)
                 </span>
               )}
-              <span className="text-[11px] font-bold text-neutral-700 px-2.5 py-1 bg-yellow-100 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                Catatan Publik (Read-Only)
-              </span>
             </div>
           </div>
         </header>
       )}
 
-      {/* 3. Main Reader Area */}
+      {/* 3. Main Reader / Editor Area */}
       <main
         className={`mx-auto px-2 sm:px-6 py-3 sm:py-8 transition-all duration-200 ${widthClasses} max-w-full`}
       >
@@ -401,33 +572,62 @@ export function PublicNoteViewer({
           </div>
         )}
 
-        {/* Sticky Reader Toolbar */}
-        <div
-          className={`sticky z-20 print:hidden transition-all duration-200 mb-3 sm:mb-4 ${
-            preferences.focusMode
-              ? "top-2 sm:top-4"
-              : "top-[53px] sm:top-[60px]"
-          }`}
-        >
-          <ReadingToolbar
-            preferences={preferences}
-            onUpdatePreferences={handleUpdatePreferences}
-            tocCount={tocItems.length}
-            onOpenToc={() => setIsTocOpen(true)}
-            onCopyText={handleCopyText}
-            onShare={handleShare}
-            onExportMarkdown={handleExportMarkdown}
-            isCopied={isCopied}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={handleToggleFullscreen}
-          />
-        </div>
+        {/* Toolbar Bar: Switch between Reading Toolbar and Formatting Toolbar */}
+        {unlocked && (
+          <div
+            className={`sticky z-20 print:hidden transition-all duration-200 mb-3 sm:mb-4 ${
+              preferences.focusMode
+                ? "top-2 sm:top-4"
+                : "top-[53px] sm:top-[60px]"
+            }`}
+          >
+            {isEditable && activeViewMode === "edit" ? (
+              /* Formatting Toolbar for Edit Mode */
+              <div className="flex flex-wrap gap-x-2 gap-y-1 p-2 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] items-center">
+                {toolbarGroups.map((group, gi) => (
+                  <div key={gi} className="flex gap-0.5 border-r border-black/20 pr-2 mr-1 last:border-r-0 last:pr-0 last:mr-0">
+                    {group.map(({ label, title: btnTitle, action, active }, idx) => (
+                      <button
+                        suppressHydrationWarning
+                        key={idx}
+                        type="button"
+                        onClick={action}
+                        title={btnTitle}
+                        className={`px-2 py-1 text-xs font-mono border border-black/30 transition-colors select-none cursor-pointer flex items-center gap-1 ${
+                          active
+                            ? "bg-yellow-400 border-black font-bold text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                            : "bg-white text-neutral-800 hover:bg-yellow-100 hover:border-black"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Reading Toolbar for Reader Mode */
+              <ReadingToolbar
+                preferences={preferences}
+                onUpdatePreferences={handleUpdatePreferences}
+                tocCount={tocItems.length}
+                onOpenToc={() => setIsTocOpen(true)}
+                onCopyText={handleCopyText}
+                onShare={handleShare}
+                onExportMarkdown={handleExportMarkdown}
+                isCopied={isCopied}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={handleToggleFullscreen}
+              />
+            )}
+          </div>
+        )}
 
-        {/* Reader Container Card */}
+        {/* Reader / Editor Container Card */}
         <div
           className={`p-4 sm:p-10 md:p-12 transition-all duration-200 overflow-hidden ${themeCardStyles}`}
         >
-          {/* Title & Reading Meta Header */}
+          {/* Title & Meta Header */}
           <div className="border-b-2 border-current/20 pb-6 mb-6 sm:mb-8 space-y-4">
             <h1
               className={`font-black tracking-tight leading-tight transition-all ${
@@ -474,6 +674,13 @@ export function PublicNoteViewer({
                   <span>Terenkripsi AES-256</span>
                 </div>
               )}
+
+              {isEditable && (
+                <div className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 text-[11px] font-bold">
+                  <PencilSimple size={13} weight="bold" />
+                  <span>Kolaborasi Terbuka</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -489,8 +696,9 @@ export function PublicNoteViewer({
                   Catatan Ini Terkunci
                 </h2>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  Pemilik telah mengunci isi catatan ini dengan enkripsi
-                  AES-256. Masukkan password catatan untuk membaca isinya.
+                  {isEditable
+                    ? "Pemilik telah mengunci isi catatan ini dengan enkripsi AES-256. Masukkan password catatan untuk mulai membaca dan mengedit isinya."
+                    : "Pemilik telah mengunci isi catatan ini dengan enkripsi AES-256. Masukkan password catatan untuk membaca isinya."}
                 </p>
               </div>
 
@@ -514,10 +722,16 @@ export function PublicNoteViewer({
                   suppressHydrationWarning
                   type="submit"
                   disabled={isUnlocking}
-                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform text-black"
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform text-black cursor-pointer"
                 >
                   <Key size={16} weight="bold" />
-                  <span>{isUnlocking ? "Mendekripsi..." : "Buka Catatan"}</span>
+                  <span>
+                    {isUnlocking
+                      ? "Mendekripsi..."
+                      : isEditable
+                      ? "Buka & Mulai Edit"
+                      : "Buka Catatan"}
+                  </span>
                 </button>
               </form>
 
@@ -536,11 +750,19 @@ export function PublicNoteViewer({
               ref={contentAreaRef}
               className={`tiptap transition-all duration-150 ${fontClasses} ${fontSizeClasses} ${lineHeightClasses} max-w-full overflow-hidden`}
             >
-              {editor && (!editor.isEmpty || content) ? (
-                <EditorContent
-                  editor={editor}
-                  className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[250px] [&_.tableWrapper]:overflow-x-auto [&_.tableWrapper]:max-w-full [&_.tableWrapper]:block [&_.tableWrapper]:my-4 [&_.tableWrapper]:pb-2 [&_.tableWrapper]:touch-pan-x"
-                />
+              {editor && (!editor.isEmpty || content || (isEditable && activeViewMode === "edit")) ? (
+                <div
+                  className={
+                    isEditable && activeViewMode === "edit"
+                      ? "p-3 sm:p-5 border-2 border-dashed border-black/30 focus-within:border-black bg-black/[0.01] transition-colors rounded-none"
+                      : ""
+                  }
+                >
+                  <EditorContent
+                    editor={editor}
+                    className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[250px] [&_.tableWrapper]:overflow-x-auto [&_.tableWrapper]:max-w-full [&_.tableWrapper]:block [&_.tableWrapper]:my-4 [&_.tableWrapper]:pb-2 [&_.tableWrapper]:touch-pan-x"
+                  />
+                </div>
               ) : (
                 <div className="py-12 text-center">
                   <p className="text-current/60 italic text-sm font-medium">
@@ -559,7 +781,9 @@ export function PublicNoteViewer({
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <p>Denycode Task Manager • Personal productivity workspace</p>
             <p className="text-[11px] text-neutral-500">
-              Membaca nyaman dan bebas distraksi
+              {isEditable
+                ? "Kolaborasi catatan publik yang aman & terenkripsi"
+                : "Membaca nyaman dan bebas distraksi"}
             </p>
           </div>
         </footer>
@@ -580,7 +804,7 @@ export function PublicNoteViewer({
           onClick={handleScrollToTop}
           title="Kembali ke atas"
           aria-label="Kembali ke atas"
-          className="fixed bottom-6 right-6 z-40 p-3 bg-yellow-400 hover:bg-yellow-300 text-black border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all print:hidden"
+          className="fixed bottom-6 right-6 z-40 p-3 bg-yellow-400 hover:bg-yellow-300 text-black border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all print:hidden cursor-pointer"
         >
           <ArrowUp size={18} weight="bold" />
         </button>

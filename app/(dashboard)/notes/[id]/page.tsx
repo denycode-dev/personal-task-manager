@@ -92,6 +92,8 @@ export default async function NotePage({ params }: NotePageProps) {
             noteTitle={note.title}
             initialIsShared={shareStatus.isShared}
             initialSlug={shareStatus.publicSlug}
+            initialIsEditable={shareStatus.isEditable}
+            isLocked={lockStatus.isLocked}
           />
 
           <NoteLockDialog
