@@ -23,9 +23,13 @@ import {
   BookOpen,
   Check,
   CircleNotch,
+  ArrowsClockwise,
 } from "@phosphor-icons/react";
 import { unlockNoteAction } from "@/features/notes/actions/lock-note.action";
-import { savePublicNoteAction } from "@/features/notes/actions/save-public-note.action";
+import {
+  savePublicNoteAction,
+  syncPublicNoteAction,
+} from "@/features/notes/actions/save-public-note.action";
 import { toast } from "sonner";
 import { ReadingToolbar } from "@/features/notes/components/reading-toolbar";
 import { TableOfContentsModal } from "@/features/notes/components/table-of-contents-modal";
@@ -56,6 +60,7 @@ type ToolbarBtn = {
 };
 
 const STORAGE_KEY = "denycode_public_reader_prefs_v1";
+const OPTIMAL_SYNC_INTERVAL_MS = 4000; // 4 detik: optimal untuk real-time polling tanpa membebani database
 
 function parseNoteContent(raw: unknown): Content {
   if (!raw) return "";
@@ -101,6 +106,15 @@ export function PublicNoteViewer({
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, startTransition] = useTransition();
+
+  // Multi-user background sync states
+  const [lastSyncedUpdatedAt, setLastSyncedUpdatedAt] = useState<Date>(updatedAt);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [hasRemoteChanges, setHasRemoteChanges] = useState(false);
+  const [pendingRemoteContent, setPendingRemoteContent] = useState<unknown | null>(null);
+
+  const lastUserTypingTimeRef = useRef<number>(0);
+  const isRemoteApplyingRef = useRef<boolean>(false);
 
   // Reader Preferences State
   const [preferences, setPreferences] = useState<ReaderPreferences>(() => {
@@ -174,6 +188,7 @@ export function PublicNoteViewer({
           if (res.success) {
             setSaveState("saved");
             setContent(newContent);
+            setLastSyncedUpdatedAt(new Date(res.data.updatedAt));
           } else {
             setSaveState("error");
             toast.error(res.error ?? "Gagal menyimpan perubahan catatan.");
@@ -189,6 +204,8 @@ export function PublicNoteViewer({
     content: parseNoteContent(initialContent),
     editable: isEditable && unlocked && activeViewMode === "edit",
     onUpdate({ editor: currentEditor }) {
+      if (isRemoteApplyingRef.current) return;
+      lastUserTypingTimeRef.current = Date.now();
       if (!isEditable) return;
       triggerSave(currentEditor.getJSON());
     },
@@ -206,6 +223,143 @@ export function PublicNoteViewer({
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
   }, []);
+
+  // Multi-user periodic sync function
+  const performSync = useCallback(
+    async (forceApply: boolean = false) => {
+      if (isLocked && !unlocked) return;
+      if (isSyncing) return;
+
+      setIsSyncing(true);
+      try {
+        const res = await syncPublicNoteAction({
+          slug,
+          noteId,
+          lastUpdatedAt: lastSyncedUpdatedAt,
+          password: sessionPassword ?? undefined,
+        });
+
+        if (res.success && res.data.isUpdated && res.data.content !== undefined) {
+          const newContent = res.data.content;
+          const newDate = new Date(res.data.updatedAt);
+
+          const currentJSON = editor ? JSON.stringify(editor.getJSON()) : "";
+          const newJSON = JSON.stringify(newContent);
+
+          // Jika isinya persis sama, hanya perbarui timestamp
+          if (currentJSON === newJSON) {
+            setLastSyncedUpdatedAt(newDate);
+            setHasRemoteChanges(false);
+            setPendingRemoteContent(null);
+            return;
+          }
+
+          // Periksa apakah pengguna lokal sedang aktif mengetik
+          const now = Date.now();
+          const isUserActivelyTyping =
+            isEditable &&
+            activeViewMode === "edit" &&
+            (saveState === "saving" ||
+              now - lastUserTypingTimeRef.current < 2500 ||
+              Boolean(editor?.isFocused));
+
+          if (isUserActivelyTyping && !forceApply) {
+            // Tahan dan tampilkan banner notifikasi agar kursor dan ketikan pengguna tidak terganggu
+            setHasRemoteChanges(true);
+            setPendingRemoteContent(newContent);
+            setLastSyncedUpdatedAt(newDate);
+          } else {
+            // Terapkan sinkronisasi langsung
+            isRemoteApplyingRef.current = true;
+            const parsed = parseNoteContent(newContent);
+            editor?.commands.setContent(parsed as Content);
+            setContent(parsed);
+            setLastSyncedUpdatedAt(newDate);
+            setHasRemoteChanges(false);
+            setPendingRemoteContent(null);
+            isRemoteApplyingRef.current = false;
+            toast.info("Catatan disinkronkan dengan pembaruan terbaru.");
+          }
+        } else if (res.success && !res.data.isUpdated) {
+          setLastSyncedUpdatedAt(new Date(res.data.updatedAt));
+        }
+      } catch {
+        // Polling background gagal diam tanpa mengganggu pengguna
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    [
+      isLocked,
+      unlocked,
+      isSyncing,
+      slug,
+      noteId,
+      lastSyncedUpdatedAt,
+      sessionPassword,
+      editor,
+      isEditable,
+      activeViewMode,
+      saveState,
+    ]
+  );
+
+  // Jalankan sync periodik optimal setiap 4 detik saat tab aktif
+  useEffect(() => {
+    if (isLocked && !unlocked) return;
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startInterval = () => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        if (typeof document !== "undefined" && document.visibilityState === "visible") {
+          performSync(false);
+        }
+      }, OPTIMAL_SYNC_INTERVAL_MS);
+    };
+
+    startInterval();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        performSync(false);
+        startInterval();
+      } else if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+
+    const handleWindowFocus = () => {
+      performSync(false);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [isLocked, unlocked, performSync]);
+
+  const handleApplyRemoteChanges = () => {
+    if (!pendingRemoteContent) return;
+    isRemoteApplyingRef.current = true;
+    const parsed = parseNoteContent(pendingRemoteContent);
+    editor?.commands.setContent(parsed as Content);
+    setContent(parsed);
+    setHasRemoteChanges(false);
+    setPendingRemoteContent(null);
+    isRemoteApplyingRef.current = false;
+    toast.success("Perubahan dari pengguna lain berhasil diterapkan.");
+  };
+
+  const handleManualSync = () => {
+    performSync(true);
+    toast.success("Menyinkronkan data...");
+  };
 
   // Track Reading Progress Bar & Scroll-to-top button
   useEffect(() => {
@@ -478,10 +632,33 @@ export function PublicNoteViewer({
               </span>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              {/* Multi-user live sync indicator */}
+              {unlocked && (
+                <button
+                  type="button"
+                  onClick={handleManualSync}
+                  title="Sinkronisasi multi-pengguna aktif setiap 4 detik. Klik untuk menyinkronkan sekarang."
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono border-2 border-black bg-white hover:bg-neutral-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-transform hover:-translate-y-0.5"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <ArrowsClockwise
+                    size={13}
+                    weight="bold"
+                    className={isSyncing ? "animate-spin text-black" : "text-neutral-700"}
+                  />
+                  <span className="text-[11px] font-black text-black">
+                    {isSyncing ? "Menyinkronkan..." : "Sync 4d"}
+                  </span>
+                </button>
+              )}
+
               {/* Auto-save status indicator if in editable mode */}
               {isEditable && unlocked && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono border border-black/30 bg-neutral-50 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono border-2 border-black bg-neutral-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   {saveState === "saving" ? (
                     <>
                       <CircleNotch size={13} weight="bold" className="animate-spin text-neutral-800" />
@@ -541,7 +718,7 @@ export function PublicNoteViewer({
                   <span>Bisa Diedit</span>
                 </span>
               ) : (
-                <span className="text-[11px] font-bold text-neutral-800 px-2.5 py-1 bg-yellow-100 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <span className="text-[11px] font-bold text-neutral-800 px-2.5 py-1 bg-yellow-100 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   Catatan Publik (Hanya Baca)
                 </span>
               )}
@@ -569,6 +746,23 @@ export function PublicNoteViewer({
                 Keluar (ESC)
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Remote Changes Alert Banner */}
+        {hasRemoteChanges && (
+          <div className="mb-3 p-3 bg-yellow-200 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-black">
+              <ArrowsClockwise size={16} weight="bold" className="animate-spin text-black shrink-0" />
+              <span>Pengguna lain telah memperbarui catatan ini. Klik untuk menerapkan pembaruan terbaru.</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleApplyRemoteChanges}
+              className="px-3 py-1 bg-black text-yellow-300 hover:bg-neutral-800 text-xs font-black border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer whitespace-nowrap transition-transform hover:-translate-y-0.5"
+            >
+              Terapkan Perubahan
+            </button>
           </div>
         )}
 
@@ -678,7 +872,7 @@ export function PublicNoteViewer({
               {isEditable && (
                 <div className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 text-[11px] font-bold">
                   <PencilSimple size={13} weight="bold" />
-                  <span>Kolaborasi Terbuka</span>
+                  <span>Kolaborasi Multi-User</span>
                 </div>
               )}
             </div>
@@ -782,7 +976,7 @@ export function PublicNoteViewer({
             <p>Denycode Task Manager • Personal productivity workspace</p>
             <p className="text-[11px] text-neutral-500">
               {isEditable
-                ? "Kolaborasi catatan publik yang aman & terenkripsi"
+                ? "Kolaborasi catatan publik yang aman, terenkripsi, dan sinkron otomatis"
                 : "Membaca nyaman dan bebas distraksi"}
             </p>
           </div>

@@ -105,3 +105,103 @@ export async function savePublicNoteAction(
     },
   };
 }
+
+interface SyncPublicNoteInput {
+  slug: string;
+  noteId: string;
+  lastUpdatedAt?: string | Date;
+  password?: string;
+}
+
+export async function syncPublicNoteAction(
+  input: SyncPublicNoteInput
+): Promise<
+  ActionResult<{
+    isUpdated: boolean;
+    updatedAt: Date;
+    content?: unknown | null;
+    title?: string;
+  }>
+> {
+  const { slug, noteId, lastUpdatedAt, password } = input;
+
+  if (!slug || !noteId) {
+    return { success: false, error: "Parameter tidak lengkap." };
+  }
+
+  // 1. Validasi keberadaan tautan share
+  const share = await noteShareRepository.findBySlug(slug);
+  if (!share || share.noteId !== noteId) {
+    return {
+      success: false,
+      error: "Tautan publik tidak valid atau sudah dinonaktifkan.",
+    };
+  }
+
+  // 2. Ambil catatan terbaru dari database
+  const note = await noteRepository.findById(noteId);
+  if (!note) {
+    return { success: false, error: "Catatan tidak ditemukan." };
+  }
+
+  // 3. Bandingkan timestamp updatedAt
+  if (lastUpdatedAt) {
+    const localTime = new Date(lastUpdatedAt).getTime();
+    const serverTime = new Date(note.updatedAt).getTime();
+    // Jika tidak ada perubahan baru di server, kembalikan isUpdated: false tanpa mentransfer data besar
+    if (serverTime <= localTime) {
+      return {
+        success: true,
+        data: {
+          isUpdated: false,
+          updatedAt: note.updatedAt,
+        },
+      };
+    }
+  }
+
+  // 4. Ada pembaruan: periksa enkripsi jika catatan terkunci
+  const lock = await noteLockRepository.findByNoteId(noteId);
+  if (lock) {
+    if (!password) {
+      return {
+        success: true,
+        data: {
+          isUpdated: true,
+          updatedAt: note.updatedAt,
+          title: note.title,
+          content: null,
+        },
+      };
+    }
+
+    const decryptRes = await noteLockService.verifyAndDecrypt(noteId, password);
+    if (!decryptRes.success) {
+      return {
+        success: false,
+        error: decryptRes.error ?? "Gagal mendekripsi catatan terkunci.",
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        isUpdated: true,
+        updatedAt: note.updatedAt,
+        title: note.title,
+        content: decryptRes.content,
+      },
+    };
+  }
+
+  // 5. Catatan tidak terkunci: kirim konten terbaru
+  return {
+    success: true,
+    data: {
+      isUpdated: true,
+      updatedAt: note.updatedAt,
+      title: note.title,
+      content: note.content,
+    },
+  };
+}
