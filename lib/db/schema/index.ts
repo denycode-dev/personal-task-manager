@@ -1,4 +1,5 @@
 export * from "./folders";
+export * from "./folder-shares";
 export * from "./notes";
 export * from "./note-locks";
 export * from "./note-shares";

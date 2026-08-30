@@ -9,7 +9,7 @@ export function Topbar() {
 
   useEffect(() => {
     fetch("/api/deadlines/count")
-      .then((r) => r.ok ? r.json() : { count: 0 })
+      .then((r) => (r.ok ? r.json() : { count: 0 }))
       .then((d) => setDeadlineCount(d.count ?? 0))
       .catch(() => {});
   }, []);
@@ -27,7 +27,11 @@ export function Topbar() {
           )}
         </div>
         <form action={logoutAction}>
-          <button suppressHydrationWarning type="submit" className="flex items-center gap-1 text-sm font-medium hover:text-red-600 transition-colors">
+          <button
+            suppressHydrationWarning
+            type="submit"
+            className="flex items-center gap-1 text-sm font-medium hover:text-red-600 transition-colors"
+          >
             <SignOut size={16} weight="bold" />
             <span className="hidden sm:inline">Keluar</span>
           </button>

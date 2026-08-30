@@ -40,15 +40,33 @@ export function GlobalSearch() {
   const renderTypeIcon = (type: SearchResultItem["type"]) => {
     switch (type) {
       case "note":
-        return <Note size={16} weight="fill" className="text-yellow-600 shrink-0" />;
+        return (
+          <Note size={16} weight="fill" className="text-yellow-600 shrink-0" />
+        );
       case "board":
-        return <Kanban size={16} weight="fill" className="text-blue-600 shrink-0" />;
+        return (
+          <Kanban size={16} weight="fill" className="text-blue-600 shrink-0" />
+        );
       case "checklist":
-        return <CheckSquare size={16} weight="fill" className="text-emerald-600 shrink-0" />;
+        return (
+          <CheckSquare
+            size={16}
+            weight="fill"
+            className="text-emerald-600 shrink-0"
+          />
+        );
       case "folder":
-        return <Folder size={16} weight="fill" className="text-purple-600 shrink-0" />;
+        return (
+          <Folder
+            size={16}
+            weight="fill"
+            className="text-purple-600 shrink-0"
+          />
+        );
       default:
-        return <Note size={16} weight="fill" className="text-neutral-500 shrink-0" />;
+        return (
+          <Note size={16} weight="fill" className="text-neutral-500 shrink-0" />
+        );
     }
   };
 
@@ -80,7 +98,11 @@ export function GlobalSearch() {
 
       {open && isPending && query.length >= 2 && results.length === 0 && (
         <div className="absolute top-full mt-1 left-0 right-0 bg-white border-2 border-black p-3 text-xs text-neutral-600 z-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2">
-          <CircleNotch size={14} weight="bold" className="animate-spin text-black" />
+          <CircleNotch
+            size={14}
+            weight="bold"
+            className="animate-spin text-black"
+          />
           <span>Mencari &quot;{query}&quot;...</span>
         </div>
       )}

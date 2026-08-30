@@ -31,11 +31,14 @@ import {
   ArrowsDownUp,
   DownloadSimple,
   CalendarBlank,
+  Globe,
 } from "@phosphor-icons/react";
+import { FolderShareDialog } from "@/features/folders/components/folder-share-dialog";
 
 interface NotesExplorerProps {
   initialNotes: EnrichedNote[];
   folders: Folder[];
+  sharedFolderMap?: Record<string, string>;
   initialFolderId?: string;
   initialQuery?: string;
   initialSort?: string;
@@ -46,6 +49,7 @@ interface NotesExplorerProps {
 export function NotesExplorer({
   initialNotes,
   folders,
+  sharedFolderMap = {},
   initialFolderId,
   initialQuery = "",
   initialSort = "updated-desc",
@@ -199,6 +203,16 @@ export function NotesExplorer({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {selectedFolderObj && (
+            <FolderShareDialog
+              folderId={selectedFolderObj.id}
+              folderName={selectedFolderObj.name}
+              folderColor={selectedFolderObj.color}
+              initialIsShared={Boolean(sharedFolderMap[selectedFolderObj.id])}
+              initialSlug={sharedFolderMap[selectedFolderObj.id] ?? null}
+              notesCount={folderCounts.counts[selectedFolderObj.id] || 0}
+            />
+          )}
           <NoteImportDialog
             folders={folders}
             currentFolderId={selectedFolderId}
@@ -364,6 +378,7 @@ export function NotesExplorer({
           {folders.map((f) => {
             const count = folderCounts.counts[f.id] || 0;
             const isSelected = selectedFolderId === f.id;
+            const isFolderShared = Boolean(sharedFolderMap[f.id]);
             return (
               <button
                 key={f.id}
@@ -380,6 +395,11 @@ export function NotesExplorer({
                   style={{ backgroundColor: f.color }}
                 />
                 <span className="truncate max-w-[140px]">{f.name}</span>
+                {isFolderShared && (
+                  <span title="Folder Publik Aktif" className="text-purple-800">
+                    <Globe size={13} weight="bold" />
+                  </span>
+                )}
                 <span className="px-1.5 py-0.2 bg-black/10 rounded-xs text-[10px] font-black">
                   {count}
                 </span>
@@ -411,13 +431,36 @@ export function NotesExplorer({
             )}
 
             {selectedFolderId !== "all" && (
-              <span className="inline-flex items-center gap-1 bg-white px-2 py-0.5 border border-black text-[11px]">
+              <span className="inline-flex items-center gap-1.5 bg-white px-2 py-0.5 border border-black text-[11px]">
                 <span>
                   Folder:{" "}
                   {selectedFolderId === "none"
                     ? "Tanpa Folder"
                     : selectedFolderObj?.name || "Folder"}
                 </span>
+                {selectedFolderObj && (
+                  <FolderShareDialog
+                    folderId={selectedFolderObj.id}
+                    folderName={selectedFolderObj.name}
+                    folderColor={selectedFolderObj.color}
+                    initialIsShared={Boolean(sharedFolderMap[selectedFolderObj.id])}
+                    initialSlug={sharedFolderMap[selectedFolderObj.id] ?? null}
+                    notesCount={folderCounts.counts[selectedFolderObj.id] || 0}
+                    triggerButton={
+                      <span
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.2 border border-black text-[10px] font-black cursor-pointer ${
+                          sharedFolderMap[selectedFolderObj.id]
+                            ? "bg-purple-300 hover:bg-purple-200"
+                            : "bg-neutral-100 hover:bg-neutral-200"
+                        }`}
+                        title="Bagikan folder ini ke publik"
+                      >
+                        <Globe size={11} weight="bold" />
+                        <span>{sharedFolderMap[selectedFolderObj.id] ? "Publik Aktif" : "Bagikan"}</span>
+                      </span>
+                    }
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => setSelectedFolderId("all")}

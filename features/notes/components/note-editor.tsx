@@ -9,12 +9,24 @@ import { TableHeader } from "@tiptap/extension-table/header";
 import { TableCell } from "@tiptap/extension-table/cell";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { updateNoteAction } from "@/features/notes/actions/update-note.action";
-import { unlockNoteAction, saveLockedNoteAction } from "@/features/notes/actions/lock-note.action";
+import {
+  unlockNoteAction,
+  saveLockedNoteAction,
+} from "@/features/notes/actions/lock-note.action";
 import { toast } from "sonner";
 import { AUTO_SAVE_DEBOUNCE_MS } from "@/config/app";
-import { Lock, Key, ShieldCheck, CircleNotch, Image as ImageIcon } from "@phosphor-icons/react";
+import {
+  Lock,
+  Key,
+  ShieldCheck,
+  CircleNotch,
+  Image as ImageIcon,
+} from "@phosphor-icons/react";
 import { CustomImage } from "@/features/notes/extensions/custom-image-extension";
-import { optimizeImageToWebP, formatFileSize } from "@/features/notes/utils/image-optimizer";
+import {
+  optimizeImageToWebP,
+  formatFileSize,
+} from "@/features/notes/utils/image-optimizer";
 import { uploadClientFile } from "@/lib/imagekit/client-upload";
 import type { Note } from "@/lib/db/schema";
 
@@ -43,13 +55,15 @@ const editorExtensions = [
 ];
 
 export function NoteEditor({ note, isLocked = false }: Props) {
-  const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
+  const [saveState, setSaveState] = useState<"saved" | "saving" | "error">(
+    "saved",
+  );
   const [title, setTitle] = useState(note.title);
   const titleRef = useRef(title);
 
   const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [unlockedContent, setUnlockedContent] = useState<unknown | null>(
-    isLocked ? null : note.content
+    isLocked ? null : note.content,
   );
   const [unlockPasswordInput, setUnlockPasswordInput] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -74,22 +88,33 @@ export function NoteEditor({ note, isLocked = false }: Props) {
         startTransition(async () => {
           if (isLocked && sessionPassword) {
             // Save encrypted content
-            const lockRes = await saveLockedNoteAction(note.id, sessionPassword, content);
-            const titleRes = await updateNoteAction(note.id, { title: newTitle });
-            setSaveState(lockRes.success && titleRes.success ? "saved" : "error");
+            const lockRes = await saveLockedNoteAction(
+              note.id,
+              sessionPassword,
+              content,
+            );
+            const titleRes = await updateNoteAction(note.id, {
+              title: newTitle,
+            });
+            setSaveState(
+              lockRes.success && titleRes.success ? "saved" : "error",
+            );
             if (!lockRes.success || !titleRes.success) {
               toast.error("Gagal menyimpan catatan terenkripsi.");
             }
           } else {
             // Save normal plaintext
-            const result = await updateNoteAction(note.id, { title: newTitle, content });
+            const result = await updateNoteAction(note.id, {
+              title: newTitle,
+              content,
+            });
             setSaveState(result.success ? "saved" : "error");
             if (!result.success) toast.error("Gagal menyimpan catatan.");
           }
         });
       }, AUTO_SAVE_DEBOUNCE_MS);
     },
-    [note.id, isLocked, sessionPassword]
+    [note.id, isLocked, sessionPassword],
   );
 
   const editor = useEditor({
@@ -151,12 +176,17 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       }
 
       setIsUploadingImage(true);
-      const toastId = toast.loading("Mengoptimasi gambar ke format WebP (80%)...");
+      const toastId = toast.loading(
+        "Mengoptimasi gambar ke format WebP (80%)...",
+      );
 
       try {
         // 1. Optimasi di browser menggunakan Canvas API
-        const { file: optimizedFile, reductionPercentage, optimizedSize } =
-          await optimizeImageToWebP(file, 0.8, "note-image");
+        const {
+          file: optimizedFile,
+          reductionPercentage,
+          optimizedSize,
+        } = await optimizeImageToWebP(file, 0.8, "note-image");
 
         toast.loading("Mengunggah gambar ke ImageKit CDN...", { id: toastId });
 
@@ -201,7 +231,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
           reductionPercentage > 0 ? ` (hemat ${reductionPercentage}%)` : "";
         toast.success(
           `Gambar berhasil diunggah! ${formatFileSize(optimizedSize)}${savingsText} [WebP 80%]`,
-          { id: toastId }
+          { id: toastId },
         );
       } catch (err: unknown) {
         const errorMsg =
@@ -214,7 +244,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
-    [editor, triggerSave]
+    [editor, triggerSave],
   );
 
   useEffect(() => {
@@ -262,9 +292,12 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     fileInputRef.current?.click();
   }, []);
 
-  useEffect(() => () => {
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    },
+    [],
+  );
 
   // If note is locked and not yet unlocked in current session, show Lock Gate
   if (isLocked && !sessionPassword) {
@@ -278,13 +311,17 @@ export function NoteEditor({ note, isLocked = false }: Props) {
           <div className="space-y-1.5">
             <h2 className="text-xl font-black text-black">Catatan Terkunci</h2>
             <p className="text-xs text-neutral-700 leading-relaxed max-w-xs mx-auto">
-              Dokumen ini dienkripsi dengan <strong>AES-256 Envelope Encryption</strong>. Masukkan password catatan Anda untuk mendekripsi dan membaca isinya.
+              Dokumen ini dienkripsi dengan{" "}
+              <strong>AES-256 Envelope Encryption</strong>. Masukkan password
+              catatan Anda untuk mendekripsi dan membaca isinya.
             </p>
           </div>
 
           <form onSubmit={handleUnlock} className="space-y-3 pt-2">
             <div className="space-y-1 text-left">
-              <label className="text-xs font-bold text-black">Password Catatan</label>
+              <label className="text-xs font-bold text-black">
+                Password Catatan
+              </label>
               <input
                 suppressHydrationWarning
                 type="password"
@@ -305,7 +342,11 @@ export function NoteEditor({ note, isLocked = false }: Props) {
             >
               {isUnlocking ? (
                 <>
-                  <CircleNotch size={16} weight="bold" className="animate-spin" />
+                  <CircleNotch
+                    size={16}
+                    weight="bold"
+                    className="animate-spin"
+                  />
                   <span>Mendekripsi...</span>
                 </>
               ) : (
@@ -331,40 +372,133 @@ export function NoteEditor({ note, isLocked = false }: Props) {
   const toolbarGroups: ToolbarBtn[][] = [
     // Text formatting
     [
-      { label: "B",  title: "Bold",          action: () => editor.chain().focus().toggleBold().run(),          active: editor.isActive("bold") },
-      { label: "I",  title: "Italic",         action: () => editor.chain().focus().toggleItalic().run(),        active: editor.isActive("italic") },
-      { label: "U",  title: "Underline",      action: () => editor.chain().focus().toggleUnderline().run(),     active: editor.isActive("underline") },
-      { label: "S",  title: "Strikethrough",  action: () => editor.chain().focus().toggleStrike().run(),        active: editor.isActive("strike") },
+      {
+        label: "B",
+        title: "Bold",
+        action: () => editor.chain().focus().toggleBold().run(),
+        active: editor.isActive("bold"),
+      },
+      {
+        label: "I",
+        title: "Italic",
+        action: () => editor.chain().focus().toggleItalic().run(),
+        active: editor.isActive("italic"),
+      },
+      {
+        label: "U",
+        title: "Underline",
+        action: () => editor.chain().focus().toggleUnderline().run(),
+        active: editor.isActive("underline"),
+      },
+      {
+        label: "S",
+        title: "Strikethrough",
+        action: () => editor.chain().focus().toggleStrike().run(),
+        active: editor.isActive("strike"),
+      },
     ],
     // Headings
     [
-      { label: "H1", title: "Heading 1", action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), active: editor.isActive("heading", { level: 1 }) },
-      { label: "H2", title: "Heading 2", action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), active: editor.isActive("heading", { level: 2 }) },
-      { label: "H3", title: "Heading 3", action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), active: editor.isActive("heading", { level: 3 }) },
+      {
+        label: "H1",
+        title: "Heading 1",
+        action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
+        active: editor.isActive("heading", { level: 1 }),
+      },
+      {
+        label: "H2",
+        title: "Heading 2",
+        action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+        active: editor.isActive("heading", { level: 2 }),
+      },
+      {
+        label: "H3",
+        title: "Heading 3",
+        action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+        active: editor.isActive("heading", { level: 3 }),
+      },
     ],
     // Lists
     [
-      { label: "• List",  title: "Bullet list",   action: () => editor.chain().focus().toggleBulletList().run(),   active: editor.isActive("bulletList") },
-      { label: "1. List", title: "Ordered list",  action: () => editor.chain().focus().toggleOrderedList().run(),  active: editor.isActive("orderedList") },
+      {
+        label: "• List",
+        title: "Bullet list",
+        action: () => editor.chain().focus().toggleBulletList().run(),
+        active: editor.isActive("bulletList"),
+      },
+      {
+        label: "1. List",
+        title: "Ordered list",
+        action: () => editor.chain().focus().toggleOrderedList().run(),
+        active: editor.isActive("orderedList"),
+      },
     ],
     // Blocks
     [
-      { label: "❝",     title: "Blockquote", action: () => editor.chain().focus().toggleBlockquote().run(),  active: editor.isActive("blockquote") },
-      { label: "</>",   title: "Code block", action: () => editor.chain().focus().toggleCodeBlock().run(),   active: editor.isActive("codeBlock") },
-      { label: "code",  title: "Inline code", action: () => editor.chain().focus().toggleCode().run(),       active: editor.isActive("code") },
+      {
+        label: "❝",
+        title: "Blockquote",
+        action: () => editor.chain().focus().toggleBlockquote().run(),
+        active: editor.isActive("blockquote"),
+      },
+      {
+        label: "</>",
+        title: "Code block",
+        action: () => editor.chain().focus().toggleCodeBlock().run(),
+        active: editor.isActive("codeBlock"),
+      },
+      {
+        label: "code",
+        title: "Inline code",
+        action: () => editor.chain().focus().toggleCode().run(),
+        active: editor.isActive("code"),
+      },
     ],
     // Table
     [
-      { label: "⊞ Tabel",    title: "Sisipkan tabel 3×3",  action: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
-      { label: "+ Kolom",    title: "Tambah kolom",         action: () => editor.chain().focus().addColumnAfter().run() },
-      { label: "+ Baris",    title: "Tambah baris",         action: () => editor.chain().focus().addRowAfter().run() },
-      { label: "✕ Tabel",   title: "Hapus tabel",          action: () => editor.chain().focus().deleteTable().run() },
+      {
+        label: "⊞ Tabel",
+        title: "Sisipkan tabel 3×3",
+        action: () =>
+          editor
+            .chain()
+            .focus()
+            .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+            .run(),
+      },
+      {
+        label: "+ Kolom",
+        title: "Tambah kolom",
+        action: () => editor.chain().focus().addColumnAfter().run(),
+      },
+      {
+        label: "+ Baris",
+        title: "Tambah baris",
+        action: () => editor.chain().focus().addRowAfter().run(),
+      },
+      {
+        label: "✕ Tabel",
+        title: "Hapus tabel",
+        action: () => editor.chain().focus().deleteTable().run(),
+      },
     ],
     // Misc
     [
-      { label: "—",   title: "Garis horizontal", action: () => editor.chain().focus().setHorizontalRule().run() },
-      { label: "↩",   title: "Undo", action: () => editor.chain().focus().undo().run() },
-      { label: "↪",   title: "Redo", action: () => editor.chain().focus().redo().run() },
+      {
+        label: "—",
+        title: "Garis horizontal",
+        action: () => editor.chain().focus().setHorizontalRule().run(),
+      },
+      {
+        label: "↩",
+        title: "Undo",
+        action: () => editor.chain().focus().undo().run(),
+      },
+      {
+        label: "↪",
+        title: "Redo",
+        action: () => editor.chain().focus().redo().run(),
+      },
     ],
   ];
 
@@ -396,7 +530,11 @@ export function NoteEditor({ note, isLocked = false }: Props) {
             </span>
           )}
           <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-            {saveState === "saving" ? "Menyimpan…" : saveState === "error" ? "⚠ Gagal menyimpan" : "✓ Tersimpan"}
+            {saveState === "saving"
+              ? "Menyimpan…"
+              : saveState === "error"
+                ? "⚠ Gagal menyimpan"
+                : "✓ Tersimpan"}
           </span>
         </div>
       </div>
@@ -439,8 +577,14 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       {isUploadingImage && (
         <div className="px-6 py-2 bg-yellow-100 border-b-2 border-black flex items-center justify-between gap-2 text-xs font-bold text-neutral-900 animate-in fade-in duration-150">
           <div className="flex items-center gap-2">
-            <CircleNotch size={16} weight="bold" className="animate-spin text-black shrink-0" />
-            <span>Sedang mengompresi gambar (WebP 80%) & mengunggah ke ImageKit...</span>
+            <CircleNotch
+              size={16}
+              weight="bold"
+              className="animate-spin text-black shrink-0"
+            />
+            <span>
+              Sedang mengompresi gambar (WebP 80%) & mengunggah ke ImageKit...
+            </span>
           </div>
           <span className="text-[10px] font-mono uppercase bg-black text-yellow-400 px-1.5 py-0.5">
             Upload Aktif

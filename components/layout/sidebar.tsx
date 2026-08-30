@@ -32,14 +32,14 @@ export function Sidebar() {
     <aside
       className={cn(
         "hidden md:flex flex-col min-h-screen border-r-2 border-black bg-white transition-all duration-200 select-none z-30",
-        sidebarMinimized ? "w-16 p-2" : "w-60 p-4"
+        sidebarMinimized ? "w-16 p-2" : "w-60 p-4",
       )}
     >
       {/* Header with Title and Minimize Toggle */}
       <div
         className={cn(
           "flex items-center mb-6 pb-2 border-b-2 border-black/10",
-          sidebarMinimized ? "justify-center" : "justify-between px-2"
+          sidebarMinimized ? "justify-center" : "justify-between px-2",
         )}
       >
         {!sidebarMinimized && (
@@ -88,7 +88,7 @@ export function Sidebar() {
                   : "gap-3 px-3 py-2 text-sm",
                 isActive
                   ? "bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black"
-                  : "hover:bg-neutral-100 text-neutral-700 hover:text-black border-2 border-transparent"
+                  : "hover:bg-neutral-100 text-neutral-700 hover:text-black border-2 border-transparent",
               )}
             >
               <Icon
@@ -96,7 +96,9 @@ export function Sidebar() {
                 weight={isActive ? "fill" : "bold"}
                 className="shrink-0"
               />
-              {!sidebarMinimized && <span className="truncate">{item.label}</span>}
+              {!sidebarMinimized && (
+                <span className="truncate">{item.label}</span>
+              )}
             </Link>
           );
         })}
@@ -110,7 +112,10 @@ export function Sidebar() {
         </div>
       ) : (
         <div className="pt-2 border-t-2 border-black/10 flex justify-center text-muted-foreground">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" title="Online" />
+          <span
+            className="w-2 h-2 rounded-full bg-emerald-500"
+            title="Online"
+          />
         </div>
       )}
     </aside>

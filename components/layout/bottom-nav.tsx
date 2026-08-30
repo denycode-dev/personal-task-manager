@@ -1,6 +1,12 @@
 "use client";
 
-import { House, Note, Kanban, CheckSquare, CalendarBlank } from "@phosphor-icons/react";
+import {
+  House,
+  Note,
+  Kanban,
+  CheckSquare,
+  CalendarBlank,
+} from "@phosphor-icons/react";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -10,8 +16,16 @@ const navItems = [
   { href: "/dashboard", label: "Beranda", icon: <House weight="fill" /> },
   { href: "/notes", label: "Catatan", icon: <Note weight="fill" /> },
   { href: "/kanban", label: "Kanban", icon: <Kanban weight="fill" /> },
-  { href: "/checklists", label: "Checklist", icon: <CheckSquare weight="fill" /> },
-  { href: "/calendar", label: "Kalender", icon: <CalendarBlank weight="fill" /> },
+  {
+    href: "/checklists",
+    label: "Checklist",
+    icon: <CheckSquare weight="fill" />,
+  },
+  {
+    href: "/calendar",
+    label: "Kalender",
+    icon: <CalendarBlank weight="fill" />,
+  },
 ];
 
 export function BottomNav() {
@@ -26,7 +40,7 @@ export function BottomNav() {
           prefetch={true}
           className={cn(
             "flex flex-col items-center gap-0.5 text-xs active:scale-90 transition-transform",
-            pathname === item.href ? "font-bold" : "text-muted-foreground"
+            pathname === item.href ? "font-bold" : "text-muted-foreground",
           )}
         >
           <span className="text-xl">{item.icon}</span>

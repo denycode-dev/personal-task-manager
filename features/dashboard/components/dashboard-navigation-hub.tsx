@@ -20,7 +20,8 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
     {
       id: "notes",
       title: "Catatan (Notes)",
-      description: "Tulis dan susun ide dengan rich-text editor bebas gangguan.",
+      description:
+        "Tulis dan susun ide dengan rich-text editor bebas gangguan.",
       href: "/notes",
       quickActionHref: "/notes/new",
       quickActionLabel: "Tulis Baru",
@@ -33,7 +34,8 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
     {
       id: "kanban",
       title: "Papan Kanban",
-      description: "Visualisasikan alur kerja dengan tahapan tugas & drag-and-drop.",
+      description:
+        "Visualisasikan alur kerja dengan tahapan tugas & drag-and-drop.",
       href: "/kanban",
       quickActionHref: "/kanban",
       quickActionLabel: "Papan Baru",
@@ -46,7 +48,8 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
     {
       id: "checklists",
       title: "Checklist Harian",
-      description: "Daftar to-do ringkas dan pelacak target yang perlu diselesaikan.",
+      description:
+        "Daftar to-do ringkas dan pelacak target yang perlu diselesaikan.",
       href: "/checklists",
       quickActionHref: "/checklists",
       quickActionLabel: "Checklist Baru",
@@ -59,7 +62,8 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
     {
       id: "calendar",
       title: "Kalender & Linimasa",
-      description: "Lihat seluruh deadline tugas dan event dalam satu kalender global.",
+      description:
+        "Lihat seluruh deadline tugas dan event dalam satu kalender global.",
       href: "/calendar",
       quickActionHref: "/calendar",
       quickActionLabel: "Buka Kalender",
@@ -72,7 +76,8 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
     {
       id: "folders",
       title: "Folder & Organisasi",
-      description: "Kelompokkan catatan, kanban, dan checklist dalam kategori proyek.",
+      description:
+        "Kelompokkan catatan, kanban, dan checklist dalam kategori proyek.",
       href: "/folders",
       quickActionHref: "/folders",
       quickActionLabel: "Kelola Folder",

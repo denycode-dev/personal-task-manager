@@ -21,7 +21,10 @@ import {
   Kanban,
   CheckSquareOffset,
   CircleNotch,
+  Globe,
+  ShareNetwork,
 } from "@phosphor-icons/react";
+import { FolderShareDialog } from "@/features/folders/components/folder-share-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Folder as FolderType } from "@/lib/db/schema";
 import type { FolderWithCounts } from "@/features/folders/services/folder.service";
@@ -72,8 +75,10 @@ function ColorPicker({
 
 export function FolderList({
   initialFolders,
+  sharedFolderMap = {},
 }: {
   initialFolders: (FolderType | FolderWithCounts)[];
+  sharedFolderMap?: Record<string, string>;
 }) {
   const [folders, setFolders] = useState<(FolderType | FolderWithCounts)[]>(initialFolders);
   const [name, setName] = useState("");
@@ -230,6 +235,33 @@ export function FolderList({
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
+                    <FolderShareDialog
+                      folderId={folder.id}
+                      folderName={folder.name}
+                      folderColor={folder.color}
+                      initialIsShared={Boolean(sharedFolderMap[folder.id])}
+                      initialSlug={sharedFolderMap[folder.id] ?? null}
+                      notesCount={folderWithCounts.notesCount ?? 0}
+                      triggerButton={
+                        <button
+                          suppressHydrationWarning
+                          type="button"
+                          disabled={isPending}
+                          className={`p-1.5 border rounded transition-colors disabled:opacity-50 ${
+                            sharedFolderMap[folder.id]
+                              ? "bg-purple-200 text-purple-900 border-black hover:bg-purple-300"
+                              : "text-neutral-600 hover:text-black hover:bg-neutral-100 border-transparent hover:border-black"
+                          }`}
+                          title={sharedFolderMap[folder.id] ? "Folder Publik Aktif (Klik untuk kelola)" : "Bagikan folder ke publik"}
+                        >
+                          {sharedFolderMap[folder.id] ? (
+                            <Globe size={15} weight="bold" />
+                          ) : (
+                            <ShareNetwork size={15} weight="bold" />
+                          )}
+                        </button>
+                      }
+                    />
                     <button
                       suppressHydrationWarning
                       type="button"

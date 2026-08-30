@@ -15,7 +15,12 @@ import { createBoardAction } from "@/features/kanban/actions/board.action";
 import { createChecklistAction } from "@/features/checklists/actions/checklist.action";
 import { createTimelineEventAction } from "@/features/timeline/actions/timeline.action";
 import { createFolderAction } from "@/features/folders/actions/folder.action";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type QuickModalType = "board" | "checklist" | "event" | "folder" | null;
@@ -25,7 +30,7 @@ export function MobileFAB() {
   const [modalType, setModalType] = useState<QuickModalType>(null);
   const [titleInput, setTitleInput] = useState("");
   const [startAtInput, setStartAtInput] = useState(
-    new Date().toISOString().slice(0, 16)
+    new Date().toISOString().slice(0, 16),
   );
   const [folderColor, setFolderColor] = useState("#FFD500");
   const [isPending, startTransition] = useTransition();
@@ -37,7 +42,9 @@ export function MobileFAB() {
     return null;
   }
 
-  const handleActionClick = (action: "note" | "board" | "checklist" | "event" | "folder") => {
+  const handleActionClick = (
+    action: "note" | "board" | "checklist" | "event" | "folder",
+  ) => {
     setIsOpen(false);
     if (action === "note") {
       router.push("/notes/new");
@@ -210,7 +217,10 @@ export function MobileFAB() {
       </button>
 
       {/* Quick Create Dialogs */}
-      <Dialog open={modalType !== null} onOpenChange={(o) => !o && setModalType(null)}>
+      <Dialog
+        open={modalType !== null}
+        onOpenChange={(o) => !o && setModalType(null)}
+      >
         <DialogContent className="border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-w-sm bg-white p-5 space-y-3">
           <DialogHeader className="border-b-2 border-black pb-2">
             <DialogTitle className="font-black text-base text-black">
@@ -246,7 +256,9 @@ export function MobileFAB() {
 
             {modalType === "event" && (
               <div>
-                <label className="font-bold text-black block mb-1">Waktu Mulai *</label>
+                <label className="font-bold text-black block mb-1">
+                  Waktu Mulai *
+                </label>
                 <input
                   suppressHydrationWarning
                   type="datetime-local"
@@ -259,21 +271,30 @@ export function MobileFAB() {
 
             {modalType === "folder" && (
               <div>
-                <label className="font-bold text-black block mb-1.5">Warna Penanda</label>
+                <label className="font-bold text-black block mb-1.5">
+                  Warna Penanda
+                </label>
                 <div className="flex gap-1.5 flex-wrap">
-                  {["#FFD500", "#FF6B6B", "#4361EE", "#06D6A0", "#7209B7", "#FF9F1C"].map(
-                    (c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setFolderColor(c)}
-                        style={{ backgroundColor: c }}
-                        className={`w-6 h-6 border-2 ${
-                          folderColor === c ? "border-black scale-125 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]" : "border-transparent"
-                        }`}
-                      />
-                    )
-                  )}
+                  {[
+                    "#FFD500",
+                    "#FF6B6B",
+                    "#4361EE",
+                    "#06D6A0",
+                    "#7209B7",
+                    "#FF9F1C",
+                  ].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setFolderColor(c)}
+                      style={{ backgroundColor: c }}
+                      className={`w-6 h-6 border-2 ${
+                        folderColor === c
+                          ? "border-black scale-125 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                          : "border-transparent"
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
             )}

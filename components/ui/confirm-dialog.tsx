@@ -1,11 +1,17 @@
 "use client";
 
 import { useConfirmStore } from "@/lib/stores/confirm.store";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Warning, Trash, CheckCircle } from "@phosphor-icons/react";
 
 export function ConfirmDialog() {
-  const { open, title, message, confirmLabel, danger, answer } = useConfirmStore();
+  const { open, title, message, confirmLabel, danger, answer } =
+    useConfirmStore();
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && answer(false)}>

@@ -91,7 +91,8 @@ export function DashboardSummaryReport({
                       ? "Hari ini"
                       : "Besok";
 
-                  const href = item.source === "kanban" ? "/kanban" : "/checklists";
+                  const href =
+                    item.source === "kanban" ? "/kanban" : "/checklists";
 
                   return (
                     <Link
@@ -157,15 +158,24 @@ export function DashboardSummaryReport({
               <div className="p-3 border-2 border-black bg-neutral-50 space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-bold text-black">
                   <span className="flex items-center gap-1.5">
-                    <NotePencil size={15} weight="bold" className="text-yellow-600" />
+                    <NotePencil
+                      size={15}
+                      weight="bold"
+                      className="text-yellow-600"
+                    />
                     <span>Catatan Terbaru</span>
                   </span>
-                  <Link href="/notes" className="text-[11px] text-muted-foreground hover:underline">
+                  <Link
+                    href="/notes"
+                    className="text-[11px] text-muted-foreground hover:underline"
+                  >
                     Lihat Semua &rarr;
                   </Link>
                 </div>
                 {topNotes.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">Belum ada catatan.</p>
+                  <p className="text-xs text-muted-foreground italic">
+                    Belum ada catatan.
+                  </p>
                 ) : (
                   <div className="space-y-1">
                     {topNotes.map((n) => (
@@ -205,14 +215,20 @@ export function DashboardSummaryReport({
                       {topBoard.title} ({topBoard.cardsCount} kartu)
                     </Link>
                   ) : (
-                    <p className="text-[11px] text-muted-foreground italic">Belum ada board.</p>
+                    <p className="text-[11px] text-muted-foreground italic">
+                      Belum ada board.
+                    </p>
                   )}
                 </div>
 
                 {/* Checklist Snapshot */}
                 <div className="p-2.5 border-2 border-black bg-emerald-50 space-y-1">
                   <div className="flex items-center gap-1 text-xs font-bold text-black">
-                    <CheckSquare size={14} weight="bold" className="text-emerald-700" />
+                    <CheckSquare
+                      size={14}
+                      weight="bold"
+                      className="text-emerald-700"
+                    />
                     <span>Checklist Aktif</span>
                   </div>
                   {topChecklist ? (
@@ -220,10 +236,13 @@ export function DashboardSummaryReport({
                       href={`/checklists/${topChecklist.id}`}
                       className="block text-xs font-semibold text-black truncate hover:underline"
                     >
-                      {topChecklist.title} ({topChecklist.completedItems}/{topChecklist.totalItems})
+                      {topChecklist.title} ({topChecklist.completedItems}/
+                      {topChecklist.totalItems})
                     </Link>
                   ) : (
-                    <p className="text-[11px] text-muted-foreground italic">Belum ada checklist.</p>
+                    <p className="text-[11px] text-muted-foreground italic">
+                      Belum ada checklist.
+                    </p>
                   )}
                 </div>
               </div>

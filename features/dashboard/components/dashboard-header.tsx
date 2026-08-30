@@ -26,7 +26,10 @@ export function DashboardHeader({
           </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-black">
-          {greeting}, <span className="underline decoration-yellow-400 decoration-4 underline-offset-2">Deny</span>
+          {greeting},{" "}
+          <span className="underline decoration-yellow-400 decoration-4 underline-offset-2">
+            Deny
+          </span>
         </h1>
         <p className="text-xs sm:text-sm font-medium text-muted-foreground">
           Pusat navigasi dan laporan ringkas produktivitas harian Anda.

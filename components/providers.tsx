@@ -13,15 +13,17 @@ interface ProvidersProps {
   imagekitUrlEndpoint?: string;
 }
 
-export function Providers({ children, imagekitUrlEndpoint = "" }: ProvidersProps) {
+export function Providers({
+  children,
+  imagekitUrlEndpoint = "",
+}: ProvidersProps) {
   const clientRef = useRef(getQueryClient());
-  const urlEndpoint = imagekitUrlEndpoint || process.env.IMAGEKIT_URL_ENDPOINT || "";
+  const urlEndpoint =
+    imagekitUrlEndpoint || process.env.IMAGEKIT_URL_ENDPOINT || "";
 
   return (
     <QueryClientProvider client={clientRef.current}>
-      <ImageKitProvider urlEndpoint={urlEndpoint}>
-        {children}
-      </ImageKitProvider>
+      <ImageKitProvider urlEndpoint={urlEndpoint}>{children}</ImageKitProvider>
       <Toaster position="bottom-right" richColors />
       <ConnectionStatus />
       <InstallPrompt />

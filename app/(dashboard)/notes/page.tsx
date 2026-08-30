@@ -5,7 +5,7 @@ import { folderRepository } from "@/features/folders/repositories/folder.reposit
 import { NotesExplorer } from "@/features/notes/components/notes-explorer";
 import { extractPlainText } from "@/features/notes/utils/reading-utils";
 import { db } from "@/lib/db";
-import { noteLocks, noteShares } from "@/lib/db/schema";
+import { noteLocks, noteShares, folderShares } from "@/lib/db/schema";
 import { inArray } from "drizzle-orm";
 import type { EnrichedNote } from "@/features/notes/types/note.types";
 
@@ -27,15 +27,26 @@ export default async function NotesPage({
   ]);
 
   const noteIds = notes.map((n) => n.id);
-  const [lockedRows, sharedRows] = noteIds.length > 0
-    ? await Promise.all([
-        db.select({ noteId: noteLocks.noteId }).from(noteLocks).where(inArray(noteLocks.noteId, noteIds)).catch(() => []),
-        db.select({ noteId: noteShares.noteId }).from(noteShares).where(inArray(noteShares.noteId, noteIds)).catch(() => []),
-      ])
-    : [[], []];
+  const folderIds = folders.map((f) => f.id);
+
+  const [lockedRows, sharedRows, folderSharedRows] = await Promise.all([
+    noteIds.length > 0
+      ? db.select({ noteId: noteLocks.noteId }).from(noteLocks).where(inArray(noteLocks.noteId, noteIds)).catch(() => [])
+      : [],
+    noteIds.length > 0
+      ? db.select({ noteId: noteShares.noteId }).from(noteShares).where(inArray(noteShares.noteId, noteIds)).catch(() => [])
+      : [],
+    folderIds.length > 0
+      ? db.select({ folderId: folderShares.folderId, publicSlug: folderShares.publicSlug }).from(folderShares).where(inArray(folderShares.folderId, folderIds)).catch(() => [])
+      : [],
+  ]);
 
   const lockedSet = new Set(lockedRows.map((r) => r.noteId));
   const sharedSet = new Set(sharedRows.map((r) => r.noteId));
+  const sharedFolderMap: Record<string, string> = {};
+  for (const row of folderSharedRows) {
+    sharedFolderMap[row.folderId] = row.publicSlug;
+  }
 
   const enrichedNotes: EnrichedNote[] = notes.map((note) => {
     const isLocked = lockedSet.has(note.id);
@@ -56,6 +67,7 @@ export default async function NotesPage({
       <NotesExplorer
         initialNotes={enrichedNotes}
         folders={folders}
+        sharedFolderMap={sharedFolderMap}
         initialFolderId={folderId}
         initialQuery={q}
         initialSort={sort}

@@ -6,7 +6,7 @@
 
 /* ── Neobrutalism Global Micro-Interactions & Accessibility ──────────────── */
 ::selection {
-  background-color: #FFD500;
+  background-color: #ffd500;
   color: #000000;
 }
 
@@ -82,7 +82,7 @@
   line-height: 1.6;
 }
 .tiptap blockquote {
-  border-left: 4px solid #FFD500;
+  border-left: 4px solid #ffd500;
   padding: 0.5rem 1rem;
   margin: 0.75rem 0;
   background: #fffbeb;
@@ -166,7 +166,7 @@
   overflow-wrap: break-word;
 }
 .tiptap th {
-  background: #FFD500;
+  background: #ffd500;
   font-weight: 700;
   text-align: left;
 }
@@ -183,7 +183,7 @@
   top: 0;
   bottom: 0;
   width: 4px;
-  background: #FFD500;
+  background: #ffd500;
   cursor: col-resize;
   z-index: 20;
 }
