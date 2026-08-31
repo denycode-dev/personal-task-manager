@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createChecklistAction } from "@/features/checklists/actions/checklist.action";
 import { toast } from "sonner";
 import { Plus, CircleNotch, Clock, X, Calendar } from "@phosphor-icons/react";
 import { DeadlineBadge } from "@/features/deadlines/components/deadline-badge";
 import type { Folder as FolderType } from "@/lib/db/schema";
+import { folderService } from "@/features/folders/services/folder.service";
 
 type Props = {
   folders?: FolderType[];
@@ -20,6 +21,10 @@ export function CreateChecklistForm({ folders = [], defaultFolderId = "" }: Prop
   const [showDeadline, setShowDeadline] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  const hierarchicalFolders = useMemo(() => {
+    return folderService.getFolderHierarchy(folders);
+  }, [folders]);
 
   const setPresetDeadline = (type: "today" | "tomorrow" | "3days" | "1week") => {
     const now = new Date();
@@ -82,9 +87,9 @@ export function CreateChecklistForm({ folders = [], defaultFolderId = "" }: Prop
             title="Pilih folder untuk checklist ini"
           >
             <option value="">— Tanpa Folder —</option>
-            {folders.map((f) => (
+            {hierarchicalFolders.map((f) => (
               <option key={f.id} value={f.id}>
-                📁 {f.name}
+                {f.indentLabel}
               </option>
             ))}
           </select>

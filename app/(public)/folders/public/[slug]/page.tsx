@@ -73,6 +73,8 @@ export default async function PublicFolderPage({ params }: PublicFolderPageProps
   return (
     <PublicFolderViewer
       folder={data.folder}
+      breadcrumbs={data.breadcrumbs}
+      subfolders={data.subfolders}
       notes={data.notes}
       slug={slug}
     />

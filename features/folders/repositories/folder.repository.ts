@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { folders, type Folder, type NewFolder } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 
 export const folderRepository = {
   async findAll(): Promise<Folder[]> {
@@ -10,6 +10,21 @@ export const folderRepository = {
   async findById(id: string): Promise<Folder | undefined> {
     const [folder] = await db.select().from(folders).where(eq(folders.id, id));
     return folder;
+  },
+
+  async findByParentId(parentId: string | null): Promise<Folder[]> {
+    if (parentId === null) {
+      return db
+        .select()
+        .from(folders)
+        .where(isNull(folders.parentId))
+        .orderBy(folders.createdAt);
+    }
+    return db
+      .select()
+      .from(folders)
+      .where(eq(folders.parentId, parentId))
+      .orderBy(folders.createdAt);
   },
 
   async create(data: Omit<NewFolder, "id" | "createdAt" | "updatedAt">): Promise<Folder> {

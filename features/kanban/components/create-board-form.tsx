@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createBoardAction } from "@/features/kanban/actions/board.action";
 import { toast } from "sonner";
-import { Plus, Folder, CircleNotch } from "@phosphor-icons/react";
+import { Plus, CircleNotch } from "@phosphor-icons/react";
 import type { Folder as FolderType } from "@/lib/db/schema";
+import { folderService } from "@/features/folders/services/folder.service";
 
 type Props = {
   folders?: FolderType[];
@@ -17,6 +18,10 @@ export function CreateBoardForm({ folders = [], defaultFolderId = "" }: Props) {
   const [folderId, setFolderId] = useState(defaultFolderId);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  const hierarchicalFolders = useMemo(() => {
+    return folderService.getFolderHierarchy(folders);
+  }, [folders]);
 
   const submit = () => {
     if (!title.trim()) return;
@@ -56,9 +61,9 @@ export function CreateBoardForm({ folders = [], defaultFolderId = "" }: Props) {
           title="Pilih folder untuk papan ini"
         >
           <option value="">— Tanpa Folder —</option>
-          {folders.map((f) => (
+          {hierarchicalFolders.map((f) => (
             <option key={f.id} value={f.id}>
-              📁 {f.name}
+              {f.indentLabel}
             </option>
           ))}
         </select>
@@ -85,3 +90,4 @@ export function CreateBoardForm({ folders = [], defaultFolderId = "" }: Props) {
     </div>
   );
 }
+

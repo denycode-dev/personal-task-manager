@@ -6,6 +6,12 @@ export const createFolderSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Format warna tidak valid.")
     .default("#FFD500"),
+  parentId: z
+    .string()
+    .uuid("ID folder induk tidak valid.")
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
 });
 
 export const updateFolderSchema = z.object({
@@ -14,6 +20,12 @@ export const updateFolderSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Format warna tidak valid.")
     .optional(),
+  parentId: z
+    .string()
+    .uuid("ID folder induk tidak valid.")
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
 });
 
 export type CreateFolderInput = z.infer<typeof createFolderSchema>;

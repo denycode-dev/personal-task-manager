@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { updateBoardFolderAction } from "@/features/kanban/actions/board.action";
 import { useConfirm } from "@/lib/hooks/use-confirm";
 import { toast } from "sonner";
 import { Folder, CircleNotch } from "@phosphor-icons/react";
 import type { Folder as FolderType } from "@/lib/db/schema";
+import { folderService } from "@/features/folders/services/folder.service";
 
 type Props = {
   boardId: string;
@@ -17,6 +18,10 @@ export function BoardFolderPicker({ boardId, currentFolderId, folders }: Props) 
   const [folderId, setFolderId] = useState(currentFolderId ?? "");
   const [isPending, startTransition] = useTransition();
   const confirm = useConfirm();
+
+  const hierarchicalFolders = useMemo(() => {
+    return folderService.getFolderHierarchy(folders);
+  }, [folders]);
 
   const handleChange = async (newId: string) => {
     const targetFolder = folders.find((f) => f.id === newId);
@@ -55,16 +60,17 @@ export function BoardFolderPicker({ boardId, currentFolderId, folders }: Props) 
         value={folderId}
         onChange={(e) => handleChange(e.target.value)}
         disabled={isPending}
-        className="text-xs border-2 border-black px-2 py-1 bg-white focus:outline-none focus:bg-yellow-50 disabled:opacity-50 font-bold max-w-[150px] sm:max-w-[200px]"
+        className="text-xs border-2 border-black px-2 py-1 bg-white focus:outline-none focus:bg-yellow-50 disabled:opacity-50 font-bold max-w-[150px] sm:max-w-[220px]"
         title="Pindah ke folder"
       >
         <option value="">Tanpa folder</option>
-        {folders.map((f) => (
+        {hierarchicalFolders.map((f) => (
           <option key={f.id} value={f.id}>
-            {f.name}
+            {f.indentLabel}
           </option>
         ))}
       </select>
     </div>
   );
 }
+

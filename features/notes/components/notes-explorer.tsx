@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Folder } from "@/lib/db/schema";
+import { folderService } from "@/features/folders/services/folder.service";
 import type {
   EnrichedNote,
   NoteSortOption,
@@ -32,6 +33,8 @@ import {
   DownloadSimple,
   CalendarBlank,
   Globe,
+  CaretRight,
+  FolderSimple,
 } from "@phosphor-icons/react";
 import { FolderShareDialog } from "@/features/folders/components/folder-share-dialog";
 
@@ -64,6 +67,7 @@ export function NotesExplorer({
   const [selectedFolderId, setSelectedFolderId] = useState<string>(
     initialFolderId || "all"
   );
+  const [includeSubfolders, setIncludeSubfolders] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<NoteStatusFilter>(
     (initialStatus as NoteStatusFilter) || "all"
   );
@@ -73,6 +77,29 @@ export function NotesExplorer({
   const [viewMode, setViewMode] = useState<NoteViewMode>(
     (initialView as NoteViewMode) || "grid"
   );
+
+  const hierarchicalFolders = useMemo(() => {
+    return folderService.getFolderHierarchy(folders);
+  }, [folders]);
+
+  const folderPathMap = useMemo(() => {
+    const map = new Map<string, { path: string; color: string; name: string }>();
+    for (const h of hierarchicalFolders) {
+      map.set(h.id, { path: h.path, color: h.color, name: h.name });
+    }
+    return map;
+  }, [hierarchicalFolders]);
+
+  // Compute breadcrumbs & subfolders for selected folder
+  const activeFolderBreadcrumbs = useMemo(() => {
+    if (!selectedFolderId || selectedFolderId === "all" || selectedFolderId === "none") return [];
+    return folderService.getFolderPath(selectedFolderId, folders);
+  }, [selectedFolderId, folders]);
+
+  const activeDirectSubfolders = useMemo(() => {
+    if (!selectedFolderId || selectedFolderId === "all" || selectedFolderId === "none") return [];
+    return folders.filter((f) => f.parentId === selectedFolderId);
+  }, [selectedFolderId, folders]);
 
   // Keyboard shortcut: '/' or 'Ctrl+K' focuses search input
   useEffect(() => {
@@ -126,7 +153,13 @@ export function NotesExplorer({
     if (selectedFolderId === "none") {
       result = result.filter((n) => !n.folderId);
     } else if (selectedFolderId && selectedFolderId !== "all") {
-      result = result.filter((n) => n.folderId === selectedFolderId);
+      if (includeSubfolders) {
+        const descendantIds = folderService.getDescendantFolderIds(selectedFolderId, folders);
+        const targetIds = new Set([selectedFolderId, ...descendantIds]);
+        result = result.filter((n) => n.folderId && targetIds.has(n.folderId));
+      } else {
+        result = result.filter((n) => n.folderId === selectedFolderId);
+      }
     }
 
     // 2. Status filter
@@ -375,7 +408,7 @@ export function NotesExplorer({
             </button>
           )}
 
-          {folders.map((f) => {
+          {hierarchicalFolders.map((f) => {
             const count = folderCounts.counts[f.id] || 0;
             const isSelected = selectedFolderId === f.id;
             const isFolderShared = Boolean(sharedFolderMap[f.id]);
@@ -394,6 +427,11 @@ export function NotesExplorer({
                   className="inline-block w-2.5 h-2.5 rounded-sm border border-black"
                   style={{ backgroundColor: f.color }}
                 />
+                {f.depth > 0 && (
+                  <span className="text-[10px] text-neutral-500 font-mono">
+                    {"└".padStart(f.depth, "·")}
+                  </span>
+                )}
                 <span className="truncate max-w-[140px]">{f.name}</span>
                 {isFolderShared && (
                   <span title="Folder Publik Aktif" className="text-purple-800">
@@ -407,6 +445,78 @@ export function NotesExplorer({
             );
           })}
         </div>
+
+        {/* Selected Folder Breadcrumbs & Subfolder Navigation */}
+        {activeFolderBreadcrumbs.length > 0 && (
+          <div className="pt-2 border-t border-black/10 space-y-1.5 animate-in fade-in duration-150">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-bold text-neutral-500">Jalur Folder:</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFolderId("all")}
+                  className="font-bold text-black hover:underline cursor-pointer"
+                >
+                  Semua
+                </button>
+                {activeFolderBreadcrumbs.map((crumb, idx) => (
+                  <div key={crumb.id} className="flex items-center gap-1">
+                    <CaretRight size={12} weight="bold" className="text-neutral-400" />
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFolderId(crumb.id)}
+                      className={`font-bold hover:underline cursor-pointer flex items-center gap-1 ${
+                        idx === activeFolderBreadcrumbs.length - 1
+                          ? "text-yellow-700 font-black"
+                          : "text-neutral-700"
+                      }`}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-xs border border-black"
+                        style={{ backgroundColor: crumb.color }}
+                      />
+                      <span>{crumb.name}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <label className="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-neutral-700">
+                <input
+                  type="checkbox"
+                  checked={includeSubfolders}
+                  onChange={(e) => setIncludeSubfolders(e.target.checked)}
+                  className="accent-black cursor-pointer"
+                />
+                <span>Sertakan Catatan Subfolder</span>
+              </label>
+            </div>
+
+            {/* Direct subfolder chips if any */}
+            {activeDirectSubfolders.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                <span className="text-[11px] font-bold text-neutral-500 shrink-0">Subfolder:</span>
+                {activeDirectSubfolders.map((sub) => (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => setSelectedFolderId(sub.id)}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] bg-neutral-100 hover:bg-yellow-200 border border-black/40 rounded-xs font-bold text-black transition-colors cursor-pointer shrink-0"
+                  >
+                    <span
+                      className="w-2 h-2 rounded-xs border border-black"
+                      style={{ backgroundColor: sub.color }}
+                    />
+                    <span>{sub.name}</span>
+                    <span className="text-[10px] text-neutral-500">
+                      ({folderCounts.counts[sub.id] || 0})
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 3. Active Filters Bar & Summary */}
@@ -547,6 +657,7 @@ export function NotesExplorer({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredNotes.map((note) => {
             const folder = folders.find((f) => f.id === note.folderId);
+            const folderInfo = note.folderId ? folderPathMap.get(note.folderId) : undefined;
             return (
               <div
                 key={note.id}
@@ -555,13 +666,16 @@ export function NotesExplorer({
                 <div>
                   {/* Top Bar: Folder badge on left, Status badges + Action Buttons on right */}
                   <div className="flex items-center justify-between gap-2 mb-2.5">
-                    {folder ? (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold text-neutral-800 bg-neutral-50 border border-black/30 rounded-xs">
+                    {folderInfo ? (
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold text-neutral-800 bg-neutral-50 border border-black/30 rounded-xs max-w-[170px]"
+                        title={`Jalur Folder: ${folderInfo.path}`}
+                      >
                         <span
                           className="inline-block w-2.5 h-2.5 rounded-xs border border-black shrink-0"
-                          style={{ backgroundColor: folder.color }}
+                          style={{ backgroundColor: folderInfo.color }}
                         />
-                        <span className="truncate max-w-[110px]">{folder.name}</span>
+                        <span className="truncate">{folderInfo.path}</span>
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 border border-dashed border-neutral-300 rounded-xs">
@@ -675,6 +789,7 @@ export function NotesExplorer({
           <ul className="divide-y-2 divide-black/10">
             {filteredNotes.map((note) => {
               const folder = folders.find((f) => f.id === note.folderId);
+              const folderInfo = note.folderId ? folderPathMap.get(note.folderId) : undefined;
               return (
                 <li
                   key={note.id}
@@ -749,13 +864,16 @@ export function NotesExplorer({
 
                     {/* Col 2: Folder */}
                     <div className="col-span-2 min-w-0">
-                      {folder ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-neutral-800 bg-neutral-50 border border-black/30 rounded-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,0.05)]">
+                      {folderInfo ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-neutral-800 bg-neutral-50 border border-black/30 rounded-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,0.05)] max-w-full"
+                          title={`Jalur Folder: ${folderInfo.path}`}
+                        >
                           <span
                             className="inline-block w-2.5 h-2.5 rounded-xs border border-black shrink-0"
-                            style={{ backgroundColor: folder.color }}
+                            style={{ backgroundColor: folderInfo.color }}
                           />
-                          <span className="truncate max-w-[120px]">{folder.name}</span>
+                          <span className="truncate max-w-[140px]">{folderInfo.path}</span>
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 border border-dashed border-neutral-300 rounded-xs">
@@ -890,13 +1008,16 @@ export function NotesExplorer({
                     <div className="flex items-center justify-between pt-2 border-t border-black/10 gap-2">
                       {/* Left: Folder */}
                       <div className="min-w-0 flex items-center">
-                        {folder ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-neutral-800 bg-neutral-50 border border-black/30 rounded-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,0.05)]">
+                        {folderInfo ? (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-neutral-800 bg-neutral-50 border border-black/30 rounded-xs shadow-[1px_1px_0px_0px_rgba(0,0,0,0.05)] max-w-full"
+                            title={`Jalur Folder: ${folderInfo.path}`}
+                          >
                             <span
                               className="inline-block w-2.5 h-2.5 rounded-xs border border-black shrink-0"
-                              style={{ backgroundColor: folder.color }}
+                              style={{ backgroundColor: folderInfo.color }}
                             />
-                            <span className="truncate max-w-[120px]">{folder.name}</span>
+                            <span className="truncate max-w-[120px]">{folderInfo.path}</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 border border-dashed border-neutral-300 rounded-xs">

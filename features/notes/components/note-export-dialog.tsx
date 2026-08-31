@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Folder } from "@/lib/db/schema";
 import type { EnrichedNote } from "@/features/notes/types/note.types";
+import { folderService } from "@/features/folders/services/folder.service";
 import {
   FileArrowDown,
   X,
@@ -43,9 +44,14 @@ export function NoteExportDialog({
       ? currentFolderId
       : folders[0]?.id || ""
   );
+  const [includeSubfolders, setIncludeSubfolders] = useState(true);
   const [format, setFormat] = useState<"zip" | "combined">("zip");
   const [includeFrontmatter, setIncludeFrontmatter] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+
+  const hierarchicalFolders = useMemo(() => {
+    return folderService.getFolderHierarchy(folders);
+  }, [folders]);
 
   const handleOpen = () => {
     setIsOpen(true);
@@ -62,8 +68,15 @@ export function NoteExportDialog({
     switch (scope) {
       case "filtered":
         return filteredNotes;
-      case "folder":
+      case "folder": {
+        if (!selectedFolderId) return [];
+        if (includeSubfolders) {
+          const descendantIds = folderService.getDescendantFolderIds(selectedFolderId, folders);
+          const targetIds = new Set([selectedFolderId, ...descendantIds]);
+          return allNotes.filter((n) => n.folderId && targetIds.has(n.folderId));
+        }
         return allNotes.filter((n) => n.folderId === selectedFolderId);
+      }
       case "all":
       default:
         return allNotes;
@@ -80,12 +93,12 @@ export function NoteExportDialog({
 
     setIsExporting(true);
     try {
-      // Map notes with folder names
-      const folderMap = new Map(folders.map((f) => [f.id, f.name]));
+      // Map notes with folder paths
+      const pathMap = new Map(hierarchicalFolders.map((f) => [f.id, f.path]));
       const mappedNotes = notesToExport.map((note) => ({
         title: note.title || "Catatan tanpa judul",
         content: note.content,
-        folderName: note.folderId ? folderMap.get(note.folderId) : undefined,
+        folderName: note.folderId ? pathMap.get(note.folderId) : undefined,
         updatedAt: note.updatedAt,
       }));
 
@@ -247,19 +260,30 @@ export function NoteExportDialog({
                       </div>
 
                       {scope === "folder" && (
-                        <div className="pl-6 pt-1">
+                        <div className="pl-6 pt-1 space-y-2">
                           <select
                             value={selectedFolderId}
                             onChange={(e) => setSelectedFolderId(e.target.value)}
                             className="w-full text-xs font-bold bg-white border border-black p-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:outline-none"
                           >
-                            {folders.map((f) => (
+                            {hierarchicalFolders.map((f) => (
                               <option key={f.id} value={f.id}>
-                                📁 {f.name} (
-                                {allNotes.filter((n) => n.folderId === f.id).length} catatan)
+                                {f.indentLabel} ({allNotes.filter((n) => n.folderId === f.id).length} catatan)
                               </option>
                             ))}
                           </select>
+
+                          <label className="flex items-center gap-2 cursor-pointer pt-1">
+                            <input
+                              type="checkbox"
+                              checked={includeSubfolders}
+                              onChange={(e) => setIncludeSubfolders(e.target.checked)}
+                              className="accent-black"
+                            />
+                            <span className="text-[11px] font-bold text-neutral-800">
+                              Sertakan catatan di seluruh subfolder turunan
+                            </span>
+                          </label>
                         </div>
                       )}
                     </label>

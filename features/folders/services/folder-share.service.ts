@@ -2,20 +2,35 @@ import { randomBytes } from "crypto";
 import { cache } from "react";
 import { folderShareRepository } from "@/features/folders/repositories/folder-share.repository";
 import { folderRepository } from "@/features/folders/repositories/folder.repository";
+import { folderService } from "@/features/folders/services/folder.service";
 import { noteRepository } from "@/features/notes/repositories/note.repository";
 import { noteLockRepository } from "@/features/notes/repositories/note-lock.repository";
 import { noteShareRepository } from "@/features/notes/repositories/note-share.repository";
-import { extractNoteExcerpt } from "@/features/notes/services/note-share.service";
 import { extractPlainText } from "@/features/notes/utils/reading-utils";
 import { NotFoundError } from "@/lib/errors";
+
+export interface PublicFolderSubfolderItem {
+  id: string;
+  name: string;
+  color: string;
+  parentId: string | null;
+  depth: number;
+  path: string;
+  notesCount: number;
+}
 
 export interface PublicFolderNoteItem {
   id: string;
   title: string;
+  content: unknown | null;
   snippet: string;
   isLocked: boolean;
   shareSlug: string;
   version: number;
+  folderId?: string | null;
+  folderName?: string;
+  folderColor?: string;
+  folderPath?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +43,8 @@ export interface PublicFolderData {
     createdAt: Date;
     updatedAt: Date;
   };
+  breadcrumbs?: { id: string; name: string; color: string }[];
+  subfolders: PublicFolderSubfolderItem[];
   notes: PublicFolderNoteItem[];
   slug: string;
   totalNotes: number;
@@ -90,7 +107,7 @@ export const folderShareService = {
   },
 
   /**
-   * Mengambil data folder publik beserta seluruh catatan di dalamnya.
+   * Mengambil data folder publik beserta seluruh catatan dan subfolder di dalamnya.
    * Menggunakan React cache() untuk deduplikasi antara generateMetadata dan Page render.
    */
   getPublicFolder: cache(async (slug: string): Promise<PublicFolderData | null> => {
@@ -100,7 +117,13 @@ export const folderShareService = {
     const folder = await folderRepository.findById(share.folderId);
     if (!folder) return null;
 
-    const allNotes = await noteRepository.findAll(folder.id);
+    const allFolders = await folderRepository.findAll();
+    const descendantIds = folderService.getDescendantFolderIds(folder.id, allFolders);
+    const targetFolderIds = [folder.id, ...descendantIds];
+    const breadcrumbs = folderService.getFolderPath(folder.id, allFolders);
+
+    const folderMap = new Map(allFolders.map((f) => [f.id, f]));
+    const allNotes = await noteRepository.findByFolderIds(targetFolderIds);
     const noteIds: string[] = allNotes.map((n) => n.id);
 
     // Ambil daftar lock untuk catatan-catatan di folder ini
@@ -136,19 +159,54 @@ export const folderShareService = {
       }
     }
 
+    // Hitung catatan per subfolder
+    const notesCountPerFolder: Record<string, number> = {};
+    for (const n of allNotes) {
+      if (n.folderId) {
+        notesCountPerFolder[n.folderId] = (notesCountPerFolder[n.folderId] || 0) + 1;
+      }
+    }
+
+    // Siapkan daftar subfolder di bawah folder publik
+    const subfolders: PublicFolderSubfolderItem[] = descendantIds.map((subId) => {
+      const sub = folderMap.get(subId)!;
+      const pathCrumbs = folderService.getFolderPath(sub.id, allFolders);
+      // Path relative to shared folder
+      const relPath = pathCrumbs.map((c) => c.name).join(" / ");
+      return {
+        id: sub.id,
+        name: sub.name,
+        color: sub.color,
+        parentId: sub.parentId,
+        depth: pathCrumbs.length - breadcrumbs.length,
+        path: relPath,
+        notesCount: notesCountPerFolder[sub.id] || 0,
+      };
+    });
+
     const publicNotes: PublicFolderNoteItem[] = allNotes.map((note) => {
       const isLocked = lockedIdSet.has(note.id);
       const snippet = isLocked
         ? "Catatan ini dilindungi kata sandi."
         : (extractPlainText(note.content)?.replace(/\s+/g, " ").trim() || "Tidak ada cuplikan teks.");
 
+      const noteFolder = note.folderId ? folderMap.get(note.folderId) : undefined;
+      const noteFolderPath = note.folderId
+        ? folderService.getFolderPath(note.folderId, allFolders).map((c) => c.name).join(" / ")
+        : undefined;
+
       return {
         id: note.id,
         title: note.title || "Catatan Tanpa Judul",
+        content: isLocked ? null : note.content,
         snippet,
         isLocked,
         shareSlug: shareMap.get(note.id) || note.id,
         version: note.version ?? 1,
+        folderId: note.folderId,
+        folderName: noteFolder?.name,
+        folderColor: noteFolder?.color,
+        folderPath: noteFolderPath,
         createdAt: note.createdAt,
         updatedAt: note.updatedAt,
       };
@@ -162,6 +220,8 @@ export const folderShareService = {
         createdAt: folder.createdAt,
         updatedAt: folder.updatedAt,
       },
+      breadcrumbs,
+      subfolders,
       notes: publicNotes,
       slug,
       totalNotes: publicNotes.length,
@@ -169,14 +229,18 @@ export const folderShareService = {
   }),
 
   /**
-   * Mengambil detail catatan tunggal di dalam folder publik.
+   * Mengambil detail catatan tunggal di dalam folder publik (termasuk subfolder).
    */
   getPublicFolderNoteDetail: cache(async (folderSlug: string, noteId: string) => {
     const share = await folderShareRepository.findBySlug(folderSlug);
     if (!share) return null;
 
+    const allFolders = await folderRepository.findAll();
+    const descendantIds = folderService.getDescendantFolderIds(share.folderId, allFolders);
+    const validFolderIds = new Set([share.folderId, ...descendantIds]);
+
     const note = await noteRepository.findById(noteId);
-    if (!note || note.folderId !== share.folderId) return null;
+    if (!note || !note.folderId || !validFolderIds.has(note.folderId)) return null;
 
     const lock = await noteLockRepository.findByNoteId(note.id);
     const noteShare = await noteShareRepository.findByNoteId(note.id);

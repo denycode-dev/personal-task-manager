@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useMemo } from "react";
 import { updateNoteAction } from "@/features/notes/actions/update-note.action";
 import { useConfirm } from "@/lib/hooks/use-confirm";
 import { toast } from "sonner";
 import { Folder as FolderIcon, CircleNotch } from "@phosphor-icons/react";
 import type { Folder } from "@/lib/db/schema";
+import { folderService } from "@/features/folders/services/folder.service";
 
 type Props = {
   noteId: string;
@@ -17,6 +18,10 @@ export function NoteFolderPicker({ noteId, currentFolderId, folders }: Props) {
   const [folderId, setFolderId] = useState(currentFolderId ?? "");
   const [isPending, startTransition] = useTransition();
   const confirm = useConfirm();
+
+  const hierarchicalFolders = useMemo(() => {
+    return folderService.getFolderHierarchy(folders);
+  }, [folders]);
 
   useEffect(() => {
     setFolderId(currentFolderId ?? "");
@@ -59,16 +64,17 @@ export function NoteFolderPicker({ noteId, currentFolderId, folders }: Props) {
         value={folderId}
         onChange={(e) => handleChange(e.target.value)}
         disabled={isPending}
-        className="text-xs border-2 border-black px-2 py-1 bg-white focus:outline-none focus:bg-yellow-50 disabled:opacity-50 font-bold"
+        className="text-xs border-2 border-black px-2 py-1 bg-white focus:outline-none focus:bg-yellow-50 disabled:opacity-50 font-bold max-w-[170px] sm:max-w-[220px]"
         title="Pindah ke folder"
       >
         <option value="">Tanpa folder</option>
-        {folders.map((f) => (
+        {hierarchicalFolders.map((f) => (
           <option key={f.id} value={f.id}>
-            {f.name}
+            {f.indentLabel}
           </option>
         ))}
       </select>
     </div>
   );
 }
+

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useTransition, useId } from "react";
+import { useState, useRef, useTransition, useId, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { Folder } from "@/lib/db/schema";
+import { folderService } from "@/features/folders/services/folder.service";
 import {
   FileArrowUp,
   X,
@@ -41,6 +42,10 @@ export function NoteImportDialog({
   const [items, setItems] = useState<ImportItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+
+  const hierarchicalFolders = useMemo(() => {
+    return folderService.getFolderHierarchy(folders);
+  }, [folders]);
   const [globalFolderId, setGlobalFolderId] = useState<string>(
     currentFolderId && currentFolderId !== "all" && currentFolderId !== "none"
       ? currentFolderId
@@ -317,9 +322,9 @@ export function NoteImportDialog({
                         className="text-xs font-bold bg-white border border-black px-2 py-1 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] focus:outline-none"
                       >
                         <option value="">Tanpa Folder</option>
-                        {folders.map((f) => (
+                        {hierarchicalFolders.map((f) => (
                           <option key={f.id} value={f.id}>
-                            📁 {f.name}
+                            {f.indentLabel}
                           </option>
                         ))}
                       </select>
@@ -359,9 +364,9 @@ export function NoteImportDialog({
                             className="text-[11px] font-bold bg-white border border-black px-2 py-1 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] focus:outline-none"
                           >
                             <option value="">Tanpa Folder</option>
-                            {folders.map((f) => (
+                            {hierarchicalFolders.map((f) => (
                               <option key={f.id} value={f.id}>
-                                {f.name}
+                                {f.indentLabel}
                               </option>
                             ))}
                           </select>

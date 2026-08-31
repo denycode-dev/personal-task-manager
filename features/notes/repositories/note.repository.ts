@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { notes, type Note, type NewNote } from "@/lib/db/schema";
-import { eq, desc, isNull, and, sql } from "drizzle-orm";
+import { eq, desc, isNull, and, sql, inArray } from "drizzle-orm";
 
 export const noteRepository = {
   async findAll(folderId?: string | null): Promise<Note[]> {
@@ -19,6 +19,15 @@ export const noteRepository = {
         .orderBy(desc(notes.updatedAt));
     }
     return db.select().from(notes).orderBy(desc(notes.updatedAt));
+  },
+
+  async findByFolderIds(folderIds: string[]): Promise<Note[]> {
+    if (folderIds.length === 0) return [];
+    return db
+      .select()
+      .from(notes)
+      .where(inArray(notes.folderId, folderIds))
+      .orderBy(desc(notes.updatedAt));
   },
 
   async findById(id: string): Promise<Note | undefined> {
