@@ -14,15 +14,6 @@ export const CustomImage = Image.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
-      src: {
-        default: null,
-      },
-      alt: {
-        default: null,
-      },
-      title: {
-        default: null,
-      },
       fileId: {
         default: null,
         parseHTML: (element) => element.getAttribute("data-file-id") || null,

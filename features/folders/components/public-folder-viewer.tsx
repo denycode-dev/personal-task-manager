@@ -1072,7 +1072,7 @@ export function PublicFolderViewer({
       {/* 3. Footer */}
       <footer className="border-t-2 border-black bg-white py-4 mt-8">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-bold text-neutral-600">
-          <p>© {new Date().getFullYear()} {APP_NAME} — Dokumentasi & Catatan Publik Multi-Halaman</p>
+          <p>© {new Date().getFullYear()} Deni Irawan Nugraha</p>
           <p className="text-[11px] text-neutral-500">
             Dibagikan dari folder &quot;{folder.name}&quot; ({notes.length} Halaman)
           </p>

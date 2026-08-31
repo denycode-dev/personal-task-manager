@@ -27,6 +27,7 @@ import { importNotesAction } from "@/features/notes/actions/import-notes.action"
 interface NoteImportDialogProps {
   folders: Folder[];
   currentFolderId?: string;
+  triggerButton?: React.ReactNode;
 }
 
 interface ImportItem extends ParsedMarkdownNote {
@@ -37,6 +38,7 @@ interface ImportItem extends ParsedMarkdownNote {
 export function NoteImportDialog({
   folders,
   currentFolderId,
+  triggerButton,
 }: NoteImportDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<ImportItem[]>([]);
@@ -167,7 +169,7 @@ export function NoteImportDialog({
     setItems((prev) =>
       prev.map((item) =>
         item.id === id
-          ? { ...item, selectedFolderId: folderId ? folderId : null }
+          ? { ...item, selectedFolderId: folderId === "none" ? null : folderId }
           : item
       )
     );
@@ -175,11 +177,9 @@ export function NoteImportDialog({
 
   const handleApplyGlobalFolder = (folderId: string) => {
     setGlobalFolderId(folderId);
+    const target = folderId === "none" ? null : folderId;
     setItems((prev) =>
-      prev.map((item) => ({
-        ...item,
-        selectedFolderId: folderId ? folderId : null,
-      }))
+      prev.map((item) => ({ ...item, selectedFolderId: target }))
     );
   };
 
@@ -213,16 +213,22 @@ export function NoteImportDialog({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 border-2 border-black bg-cyan-300 hover:bg-cyan-200 font-black text-xs sm:text-sm shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer shrink-0"
-        title="Impor catatan dari format Markdown (.md atau .zip)"
-      >
-        <FileArrowUp size={16} weight="bold" />
-        <span className="hidden sm:inline">Import MD</span>
-        <span className="sm:hidden">Import</span>
-      </button>
+      {triggerButton ? (
+        <span onClick={handleOpen} className="inline-block cursor-pointer">
+          {triggerButton}
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 border-2 border-black bg-cyan-300 hover:bg-cyan-200 font-black text-xs sm:text-sm shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer shrink-0"
+          title="Impor catatan dari format Markdown (.md atau .zip)"
+        >
+          <FileArrowUp size={16} weight="bold" />
+          <span className="hidden sm:inline">Import MD</span>
+          <span className="sm:hidden">Import</span>
+        </button>
+      )}
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-xs">

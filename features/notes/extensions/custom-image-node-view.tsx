@@ -8,6 +8,9 @@ import {
   TextAlignCenter,
   TextAlignRight,
   ArrowSquareOut,
+  WarningCircle,
+  ArrowClockwise,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import { deleteImageKitFileAction } from "@/lib/imagekit/actions";
 
@@ -16,6 +19,9 @@ export function CustomImageNodeView(props: NodeViewProps) {
   const { src, alt, fileId, width = "100%", alignment = "center", caption = "" } = node.attrs;
 
   const [isHovered, setIsHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   const widthOptions = ["25%", "50%", "75%", "100%"];
 
@@ -37,6 +43,14 @@ export function CustomImageNodeView(props: NodeViewProps) {
         console.warn("Failed to delete image from ImageKit on node deletion:", err);
       });
     }
+  };
+
+  const handleRetry = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setImageError(false);
+    setImageLoaded(false);
+    setRetryKey((prev) => prev + 1);
   };
 
   return (
@@ -118,15 +132,17 @@ export function CustomImageNodeView(props: NodeViewProps) {
             </div>
 
             {/* Open Full Image */}
-            <a
-              href={src}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Buka gambar di tab baru"
-              className="p-1 text-neutral-600 hover:text-black bg-white hover:bg-neutral-100 border border-transparent hover:border-black transition-colors"
-            >
-              <ArrowSquareOut size={13} weight="bold" />
-            </a>
+            {src && (
+              <a
+                href={src}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Buka gambar di tab baru"
+                className="p-1 text-neutral-600 hover:text-black bg-white hover:bg-neutral-100 border border-transparent hover:border-black transition-colors"
+              >
+                <ArrowSquareOut size={13} weight="bold" />
+              </a>
+            )}
 
             {/* Delete Image */}
             <button
@@ -141,14 +157,59 @@ export function CustomImageNodeView(props: NodeViewProps) {
           </div>
         )}
 
-        {/* Image Content */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt || "Gambar Catatan"}
-          className="w-full h-auto object-contain block select-none"
-          draggable={false}
-        />
+        {/* Loading Skeleton */}
+        {!imageLoaded && !imageError && src && (
+          <div className="w-full min-h-[160px] bg-neutral-100 flex flex-col items-center justify-center p-6 text-neutral-500 animate-pulse gap-2">
+            <CircleNotch size={24} weight="bold" className="animate-spin text-neutral-700" />
+            <span className="text-xs font-semibold">Memuat gambar...</span>
+          </div>
+        )}
+
+        {/* Error Fallback */}
+        {imageError ? (
+          <div className="w-full min-h-[140px] bg-red-50 border border-red-200 p-4 flex flex-col items-center justify-center text-center gap-2">
+            <WarningCircle size={28} weight="fill" className="text-red-500" />
+            <div className="space-y-0.5">
+              <p className="text-xs font-bold text-red-900">Gambar tidak dapat dimuat</p>
+              <p className="text-[11px] text-red-700 max-w-xs truncate">{alt || src || "URL tidak valid"}</p>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-white text-black border border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-100 cursor-pointer"
+              >
+                <ArrowClockwise size={12} weight="bold" />
+                <span>Coba Lagi</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-red-100 text-red-700 border border-red-400 hover:bg-red-200 cursor-pointer"
+              >
+                <Trash size={12} weight="bold" />
+                <span>Hapus</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Image Content */
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            key={retryKey}
+            src={src || ""}
+            alt={alt || "Gambar Catatan"}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => {
+              setImageError(true);
+              setImageLoaded(true);
+            }}
+            className={`w-full h-auto object-contain block select-none transition-opacity duration-200 ${
+              imageLoaded ? "opacity-100" : "opacity-0 absolute inset-0"
+            }`}
+            draggable={false}
+          />
+        )}
 
         {/* WebP Badge */}
         {src && typeof src === "string" && (src.includes(".webp") || src.includes("webp")) && (

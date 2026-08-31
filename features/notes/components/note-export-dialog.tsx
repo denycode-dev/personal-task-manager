@@ -26,6 +26,7 @@ interface NoteExportDialogProps {
   folders: Folder[];
   currentFolderId?: string;
   isFilterActive?: boolean;
+  triggerButton?: React.ReactNode;
 }
 
 export function NoteExportDialog({
@@ -34,6 +35,7 @@ export function NoteExportDialog({
   folders,
   currentFolderId,
   isFilterActive = false,
+  triggerButton,
 }: NoteExportDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scope, setScope] = useState<"all" | "filtered" | "folder">(
@@ -129,16 +131,22 @@ export function NoteExportDialog({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 border-2 border-black bg-lime-300 hover:bg-lime-200 font-black text-xs sm:text-sm shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer shrink-0"
-        title="Ekspor catatan ke format Markdown (.md atau .zip)"
-      >
-        <FileArrowDown size={16} weight="bold" />
-        <span className="hidden sm:inline">Export MD</span>
-        <span className="sm:hidden">Export</span>
-      </button>
+      {triggerButton ? (
+        <span onClick={handleOpen} className="inline-block cursor-pointer">
+          {triggerButton}
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 border-2 border-black bg-lime-300 hover:bg-lime-200 font-black text-xs sm:text-sm shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer shrink-0"
+          title="Ekspor catatan ke format Markdown (.md atau .zip)"
+        >
+          <FileArrowDown size={16} weight="bold" />
+          <span className="hidden sm:inline">Export MD</span>
+          <span className="sm:hidden">Export</span>
+        </button>
+      )}
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-xs">

@@ -69,6 +69,12 @@ export function NoteEditor({ note, isLocked = false }: Props) {
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  const isDirtyRef = useRef(false);
+  const latestDataRef = useRef<{ title: string; content: unknown }>({
+    title: note.title,
+    content: unlockedContent,
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleImageProcessAndInsertRef = useRef<
@@ -80,41 +86,77 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     titleRef.current = title;
   }, [title]);
 
+  const performSave = useCallback(
+    async (newTitle: string, content: unknown) => {
+      try {
+        if (isLocked && sessionPassword) {
+          // Save encrypted content
+          const lockRes = await saveLockedNoteAction(
+            note.id,
+            sessionPassword,
+            content,
+          );
+          const titleRes = await updateNoteAction(note.id, {
+            title: newTitle,
+          });
+          const success = lockRes.success && titleRes.success;
+          setSaveState(success ? "saved" : "error");
+          if (!success) {
+            toast.error("Gagal menyimpan catatan terenkripsi.");
+          } else {
+            isDirtyRef.current = false;
+          }
+          return success;
+        } else {
+          // Save normal plaintext
+          const result = await updateNoteAction(note.id, {
+            title: newTitle,
+            content,
+          });
+          const success = result.success;
+          setSaveState(success ? "saved" : "error");
+          if (!success) {
+            toast.error("Gagal menyimpan catatan.");
+          } else {
+            isDirtyRef.current = false;
+          }
+          return success;
+        }
+      } catch {
+        setSaveState("error");
+        toast.error("Gagal menyimpan catatan.");
+        return false;
+      }
+    },
+    [note.id, isLocked, sessionPassword],
+  );
+
+  const saveImmediately = useCallback(
+    async (newTitle: string, content: unknown) => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      setSaveState("saving");
+      return performSave(newTitle, content);
+    },
+    [performSave],
+  );
+
   const triggerSave = useCallback(
     (newTitle: string, content: unknown) => {
+      isDirtyRef.current = true;
+      latestDataRef.current = { title: newTitle, content };
+
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       setSaveState("saving");
       saveTimerRef.current = setTimeout(() => {
         startTransition(async () => {
-          if (isLocked && sessionPassword) {
-            // Save encrypted content
-            const lockRes = await saveLockedNoteAction(
-              note.id,
-              sessionPassword,
-              content,
-            );
-            const titleRes = await updateNoteAction(note.id, {
-              title: newTitle,
-            });
-            setSaveState(
-              lockRes.success && titleRes.success ? "saved" : "error",
-            );
-            if (!lockRes.success || !titleRes.success) {
-              toast.error("Gagal menyimpan catatan terenkripsi.");
-            }
-          } else {
-            // Save normal plaintext
-            const result = await updateNoteAction(note.id, {
-              title: newTitle,
-              content,
-            });
-            setSaveState(result.success ? "saved" : "error");
-            if (!result.success) toast.error("Gagal menyimpan catatan.");
-          }
+          await performSave(newTitle, content);
         });
       }, AUTO_SAVE_DEBOUNCE_MS);
     },
-    [note.id, isLocked, sessionPassword],
+    [performSave],
   );
 
   const editor = useEditor({
@@ -160,7 +202,13 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       },
     },
     onUpdate({ editor: currentEditor }) {
-      triggerSave(titleRef.current, currentEditor.getJSON());
+      const currentJSON = currentEditor.getJSON();
+      latestDataRef.current = {
+        title: titleRef.current,
+        content: currentJSON,
+      };
+      isDirtyRef.current = true;
+      triggerSave(titleRef.current, currentJSON);
     },
     immediatelyRender: false,
   });
@@ -224,8 +272,14 @@ export function NoteEditor({ note, isLocked = false }: Props) {
             .run();
         }
 
-        // Trigger auto-save immediately to persist image in note
-        triggerSave(titleRef.current, editor.getJSON());
+        // Trigger immediate save to persist image node directly in database
+        const currentJSON = editor.getJSON();
+        latestDataRef.current = {
+          title: titleRef.current,
+          content: currentJSON,
+        };
+        isDirtyRef.current = true;
+        await saveImmediately(titleRef.current, currentJSON);
 
         const savingsText =
           reductionPercentage > 0 ? ` (hemat ${reductionPercentage}%)` : "";
@@ -244,7 +298,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
-    [editor, triggerSave],
+    [editor, saveImmediately],
   );
 
   useEffect(() => {
@@ -255,6 +309,8 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     const newTitle = e.target.value;
     setTitle(newTitle);
     titleRef.current = newTitle;
+    latestDataRef.current.title = newTitle;
+    isDirtyRef.current = true;
     if (editor) {
       triggerSave(newTitle, editor.getJSON());
     }
@@ -276,6 +332,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       if (res.success) {
         setSessionPassword(unlockPasswordInput);
         setUnlockedContent(res.data.content ?? {});
+        latestDataRef.current.content = res.data.content ?? {};
         editor?.commands.setContent((res.data.content as Content) ?? {});
         toast.success("Catatan berhasil didekripsi!");
       } else {
@@ -292,12 +349,43 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     fileInputRef.current?.click();
   }, []);
 
-  useEffect(
-    () => () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    },
-    [],
-  );
+  // Flush unsaved changes on unmount (navigation) or before unload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirtyRef.current) {
+        const { title: finalTitle, content: finalContent } = latestDataRef.current;
+        if (!isLocked) {
+          updateNoteAction(note.id, {
+            title: finalTitle,
+            content: finalContent,
+          });
+        }
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      // Flush unsaved data to server upon unmounting
+      if (isDirtyRef.current) {
+        const { title: finalTitle, content: finalContent } = latestDataRef.current;
+        if (isLocked && sessionPassword) {
+          saveLockedNoteAction(note.id, sessionPassword, finalContent);
+          updateNoteAction(note.id, { title: finalTitle });
+        } else {
+          updateNoteAction(note.id, {
+            title: finalTitle,
+            content: finalContent,
+          });
+        }
+      }
+    };
+  }, [note.id, isLocked, sessionPassword]);
 
   // If note is locked and not yet unlocked in current session, show Lock Gate
   if (isLocked && !sessionPassword) {
