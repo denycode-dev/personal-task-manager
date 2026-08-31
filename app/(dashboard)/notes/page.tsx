@@ -63,7 +63,7 @@ export default async function NotesPage({
 
 
   return (
-    <div className="px-3.5 py-4 sm:px-6 sm:py-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto space-y-6">
       <NotesExplorer
         initialNotes={enrichedNotes}
         folders={folders}
