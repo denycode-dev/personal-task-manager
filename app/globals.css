@@ -101,8 +101,8 @@
 .tiptap pre {
   background: #1e1e1e;
   color: #d4d4d4;
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 0.875em;
+  font-family: var(--font-geist-mono), Consolas, "Courier New", monospace;
+  font-size: 0.8125rem;
   padding: 1rem 1.25rem;
   border: 2px solid black;
   overflow-x: auto;
@@ -117,6 +117,54 @@
   padding: 0;
   color: inherit;
   font-size: inherit;
+}
+
+/* ── Shiki Syntax Highlighting Styles ─────────────────────────────────────── */
+.shiki-container .shiki {
+  margin: 0 !important;
+  padding: 1rem 1.25rem !important;
+  font-family: var(--font-geist-mono), Consolas, "Courier New", monospace !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.65 !important;
+  overflow-x: auto !important;
+  border-radius: 0 !important;
+  tab-size: 2 !important;
+  background: transparent !important;
+}
+
+.shiki-container .shiki code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  display: grid !important;
+  min-width: 100% !important;
+}
+
+.shiki-container .shiki .line {
+  display: inline-block !important;
+  width: 100% !important;
+  padding: 0.05rem 0 !important;
+}
+
+/* Line Numbers */
+.shiki-container.with-line-numbers .line {
+  display: flex !important;
+  align-items: baseline !important;
+}
+
+.shiki-container.with-line-numbers .line::before {
+  content: attr(data-line);
+  display: inline-block;
+  width: 2.2rem;
+  padding-right: 1rem;
+  margin-right: 0.75rem;
+  text-align: right;
+  opacity: 0.45;
+  user-select: none;
+  font-size: 0.72rem;
+  font-family: inherit;
+  border-right: 1px solid currentColor;
+  flex-shrink: 0;
 }
 /* Responsive Image */
 .tiptap img {

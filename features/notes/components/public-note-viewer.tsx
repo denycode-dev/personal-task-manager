@@ -1046,6 +1046,7 @@ export function PublicNoteViewer({
 
         {/* Reader / Editor Container Card */}
         <div
+          data-theme={preferences.theme}
           className={`p-4 sm:p-10 md:p-12 transition-all duration-200 overflow-hidden ${themeCardStyles}`}
         >
           {/* Title & Meta Header */}
