@@ -13,10 +13,43 @@ export const CustomImage = Image.extend({
 
   addAttributes() {
     return {
-      ...this.parent?.(),
+      src: {
+        default: null,
+        parseHTML: (element) =>
+          element.getAttribute("src") ||
+          element.querySelector("img")?.getAttribute("src") ||
+          null,
+        renderHTML: (attributes) => {
+          if (!attributes.src) return {};
+          return { src: attributes.src };
+        },
+      },
+      alt: {
+        default: "Gambar Catatan",
+        parseHTML: (element) =>
+          element.getAttribute("alt") ||
+          element.querySelector("img")?.getAttribute("alt") ||
+          "Gambar Catatan",
+        renderHTML: (attributes) => {
+          return { alt: attributes.alt || "Gambar Catatan" };
+        },
+      },
+      title: {
+        default: null,
+        parseHTML: (element) =>
+          element.getAttribute("title") ||
+          element.querySelector("img")?.getAttribute("title") ||
+          null,
+        renderHTML: (attributes) => {
+          return attributes.title ? { title: attributes.title } : {};
+        },
+      },
       fileId: {
         default: null,
-        parseHTML: (element) => element.getAttribute("data-file-id") || null,
+        parseHTML: (element) =>
+          element.getAttribute("data-file-id") ||
+          element.querySelector("img")?.getAttribute("data-file-id") ||
+          null,
         renderHTML: (attributes) => {
           return attributes.fileId ? { "data-file-id": attributes.fileId } : {};
         },
@@ -25,6 +58,7 @@ export const CustomImage = Image.extend({
         default: "100%",
         parseHTML: (element) =>
           element.getAttribute("data-width") ||
+          element.querySelector("img")?.getAttribute("data-width") ||
           element.style.width ||
           "100%",
         renderHTML: (attributes) => {
@@ -37,7 +71,9 @@ export const CustomImage = Image.extend({
       alignment: {
         default: "center",
         parseHTML: (element) =>
-          element.getAttribute("data-alignment") || "center",
+          element.getAttribute("data-alignment") ||
+          element.querySelector("img")?.getAttribute("data-alignment") ||
+          "center",
         renderHTML: (attributes) => {
           return {
             "data-alignment": attributes.alignment || "center",
@@ -46,7 +82,10 @@ export const CustomImage = Image.extend({
       },
       caption: {
         default: "",
-        parseHTML: (element) => element.getAttribute("data-caption") || "",
+        parseHTML: (element) =>
+          element.getAttribute("data-caption") ||
+          element.querySelector("img")?.getAttribute("data-caption") ||
+          "",
         renderHTML: (attributes) => {
           return {
             "data-caption": attributes.caption || "",
@@ -54,6 +93,33 @@ export const CustomImage = Image.extend({
         },
       },
     };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: "div.note-image-wrapper",
+        getAttrs: (element) => {
+          if (!(element instanceof HTMLElement)) return false;
+          const img = element.querySelector("img");
+          if (!img) return false;
+          return {
+            src: img.getAttribute("src"),
+            alt: img.getAttribute("alt") || "Gambar Catatan",
+            fileId: img.getAttribute("data-file-id") || element.getAttribute("data-file-id"),
+            width: img.getAttribute("data-width") || element.getAttribute("data-width") || "100%",
+            alignment: element.getAttribute("data-alignment") || img.getAttribute("data-alignment") || "center",
+            caption: img.getAttribute("data-caption") || element.getAttribute("data-caption") || "",
+          };
+        },
+      },
+      {
+        tag: this.options.allowBase64 ? "img[src]" : 'img[src]:not([src^="data:"])',
+      },
+      {
+        tag: "img",
+      },
+    ];
   },
 
   renderHTML({ HTMLAttributes }) {
@@ -69,7 +135,11 @@ export const CustomImage = Image.extend({
 
     return [
       "div",
-      { class: `note-image-wrapper ${alignClass}` },
+      {
+        class: `note-image-wrapper ${alignClass}`,
+        "data-alignment": alignment,
+        "data-width": width,
+      },
       [
         "img",
         mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {

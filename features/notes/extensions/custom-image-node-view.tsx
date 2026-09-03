@@ -22,6 +22,15 @@ export function CustomImageNodeView(props: NodeViewProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const imgRef = React.useRef<HTMLImageElement>(null);
+
+  // Check if image is already cached or complete upon mount/update
+  React.useEffect(() => {
+    if (!src) return;
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setImageLoaded(true);
+    }
+  }, [src, retryKey]);
 
   const widthOptions = ["25%", "50%", "75%", "100%"];
 
@@ -165,23 +174,29 @@ export function CustomImageNodeView(props: NodeViewProps) {
           </div>
         )}
 
-        {/* Error Fallback */}
-        {imageError ? (
+        {/* Error Fallback or Missing Source */}
+        {imageError || !src ? (
           <div className="w-full min-h-[140px] bg-red-50 border border-red-200 p-4 flex flex-col items-center justify-center text-center gap-2">
             <WarningCircle size={28} weight="fill" className="text-red-500" />
             <div className="space-y-0.5">
-              <p className="text-xs font-bold text-red-900">Gambar tidak dapat dimuat</p>
-              <p className="text-[11px] text-red-700 max-w-xs truncate">{alt || src || "URL tidak valid"}</p>
+              <p className="text-xs font-bold text-red-900">
+                {!src ? "Sumber gambar tidak ditemukan" : "Gambar tidak dapat dimuat"}
+              </p>
+              <p className="text-[11px] text-red-700 max-w-xs truncate">
+                {alt || src || "Tidak ada URL gambar yang valid"}
+              </p>
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-white text-black border border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-100 cursor-pointer"
-              >
-                <ArrowClockwise size={12} weight="bold" />
-                <span>Coba Lagi</span>
-              </button>
+              {src && (
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-white text-black border border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-100 cursor-pointer"
+                >
+                  <ArrowClockwise size={12} weight="bold" />
+                  <span>Coba Lagi</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleDelete}
@@ -196,9 +211,14 @@ export function CustomImageNodeView(props: NodeViewProps) {
           /* Image Content */
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
+            ref={imgRef}
             key={retryKey}
-            src={src || ""}
+            src={src}
             alt={alt || "Gambar Catatan"}
+            data-file-id={fileId || undefined}
+            data-width={width}
+            data-alignment={alignment}
+            data-caption={caption || undefined}
             onLoad={() => setImageLoaded(true)}
             onError={() => {
               setImageError(true);

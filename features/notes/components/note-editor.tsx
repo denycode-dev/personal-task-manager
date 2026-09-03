@@ -7,7 +7,7 @@ import { Table } from "@tiptap/extension-table/table";
 import { TableRow } from "@tiptap/extension-table/row";
 import { TableHeader } from "@tiptap/extension-table/header";
 import { TableCell } from "@tiptap/extension-table/cell";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { updateNoteAction } from "@/features/notes/actions/update-note.action";
 import {
   unlockNoteAction,
@@ -57,6 +57,18 @@ const editorExtensions = [
   TableCell,
 ];
 
+function parseNoteContent(raw: unknown): Content {
+  if (!raw) return "";
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as Content;
+    } catch {
+      return raw;
+    }
+  }
+  return raw as Content;
+}
+
 export function NoteEditor({ note, isLocked = false }: Props) {
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">(
     "saved",
@@ -64,9 +76,14 @@ export function NoteEditor({ note, isLocked = false }: Props) {
   const [title, setTitle] = useState(note.title);
   const titleRef = useRef(title);
 
+  const initialContent = useMemo(
+    () => (isLocked ? null : parseNoteContent(note.content)),
+    [isLocked, note.content],
+  );
+
   const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [unlockedContent, setUnlockedContent] = useState<unknown | null>(
-    isLocked ? null : note.content,
+    initialContent,
   );
   const [unlockPasswordInput, setUnlockPasswordInput] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -75,7 +92,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
   const isDirtyRef = useRef(false);
   const latestDataRef = useRef<{ title: string; content: unknown }>({
     title: note.title,
-    content: unlockedContent,
+    content: initialContent,
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -246,11 +263,15 @@ export function NoteEditor({ note, isLocked = false }: Props) {
           folder: "/denycode/notes",
         });
 
+        if (!uploaded?.url) {
+          throw new Error("URL gambar tidak valid atau tidak diterima dari ImageKit CDN.");
+        }
+
         // 3. Sisipkan gambar ke editor Tiptap pada posisi kursor atau koordinat drop
         const imageAttrs = {
           src: uploaded.url,
           alt: uploaded.name || "Gambar Catatan",
-          fileId: uploaded.fileId,
+          fileId: uploaded.fileId || null,
           width: "100%",
           alignment: "center",
         };
@@ -333,10 +354,11 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     try {
       const res = await unlockNoteAction(note.id, unlockPasswordInput);
       if (res.success) {
+        const decryptedContent = parseNoteContent(res.data.content);
         setSessionPassword(unlockPasswordInput);
-        setUnlockedContent(res.data.content ?? {});
-        latestDataRef.current.content = res.data.content ?? {};
-        editor?.commands.setContent((res.data.content as Content) ?? {});
+        setUnlockedContent(decryptedContent);
+        latestDataRef.current.content = decryptedContent;
+        editor?.commands.setContent(decryptedContent);
         toast.success("Catatan berhasil didekripsi!");
       } else {
         toast.error(res.error ?? "Password salah.");
