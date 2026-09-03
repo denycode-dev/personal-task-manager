@@ -126,15 +126,54 @@ async function getHighlighter() {
 }
 
 /**
- * Normalizes user-entered language name to a supported Shiki language.
+ * Detects if a code snippet uses Golang syntax.
  */
-export function normalizeLanguage(lang: string | null | undefined): string {
-  if (!lang || typeof lang !== "string") return "text";
+export function isGolangSyntax(code: string): boolean {
+  if (!code || typeof code !== "string") return false;
+  const trimmed = code.trim();
+  return (
+    /\bpackage\s+[a-zA-Z0-9_]+/.test(trimmed) ||
+    /\bfunc\s+[a-zA-Z0-9_]+\s*\(/.test(trimmed) ||
+    /\bfunc\s*\([^)]*\)\s*[a-zA-Z0-9_]+/.test(trimmed) ||
+    /:=/.test(trimmed) ||
+    /\bfmt\.(Print|Sprint|Errorf)/.test(trimmed) ||
+    /\btype\s+[a-zA-Z0-9_]+\s+struct\b/.test(trimmed) ||
+    /\btype\s+[a-zA-Z0-9_]+\s+interface\b/.test(trimmed)
+  );
+}
+
+/**
+ * Normalizes user-entered language name to a supported Shiki language.
+ * If language is not specified or undetected, defaults to 'go' (if Go syntax detected)
+ * or 'javascript' instead of 'text'.
+ */
+export function normalizeLanguage(
+  lang: string | null | undefined,
+  codeContent?: string
+): string {
+  if (
+    !lang ||
+    typeof lang !== "string" ||
+    lang.trim() === "" ||
+    lang.toLowerCase() === "text" ||
+    lang.toLowerCase() === "plaintext"
+  ) {
+    if (codeContent && isGolangSyntax(codeContent)) {
+      return "go";
+    }
+    return "javascript";
+  }
+
   const clean = lang.trim().toLowerCase();
   if (clean === "mermaid") return "mermaid";
+  if (clean === "golang") return "go";
   if (LANG_MAP[clean]) return LANG_MAP[clean];
   if (SUPPORTED_LANGUAGES[clean]) return clean;
-  return "text";
+
+  if (codeContent && isGolangSyntax(codeContent)) {
+    return "go";
+  }
+  return "javascript";
 }
 
 /**
@@ -151,7 +190,7 @@ export async function highlightCodeWithShiki(
     return { html: "" };
   }
 
-  const lang = normalizeLanguage(rawLang);
+  const lang = normalizeLanguage(rawLang, trimmed);
   const effectiveLang = lang === "mermaid" ? "markdown" : lang;
   const themeName = SHIKI_THEMES[themeMode] || SHIKI_THEMES.dark;
 

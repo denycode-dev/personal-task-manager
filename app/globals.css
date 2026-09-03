@@ -118,6 +118,10 @@
   color: inherit;
   font-size: inherit;
 }
+.tiptap pre.bg-transparent,
+.tiptap pre[style*="background-color: transparent"] {
+  background: transparent !important;
+}
 
 /* ── Shiki Syntax Highlighting Styles ─────────────────────────────────────── */
 .shiki-container .shiki {

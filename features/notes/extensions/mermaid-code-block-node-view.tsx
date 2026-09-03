@@ -252,14 +252,20 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
   // Theme styling for wrapper and headers
   const isDarkActive = activeEffectiveTheme === "dark";
   const isSepiaActive = activeEffectiveTheme === "sepia";
+  const effectiveLanguage = normalizeLanguage(language, codeContent);
+  const isEditingMode = !isReadonly && (viewMode === "edit" || (isMermaid && viewMode === "code"));
 
-  const cardBorderClass = isDarkActive
+  const cardBorderClass = isEditingMode
+    ? "border-2 border-black/30 dark:border-neutral-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] bg-transparent !bg-transparent"
+    : isDarkActive
     ? "border-2 border-neutral-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] bg-[#0d1117]"
     : isSepiaActive
     ? "border-2 border-[#5c4028] shadow-[3px_3px_0px_0px_rgba(92,64,40,1)] bg-[#fdf6e3]"
     : "border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] bg-white";
 
-  const headerBgClass = isDarkActive
+  const headerBgClass = isEditingMode
+    ? "bg-neutral-100/70 dark:bg-neutral-900/70 backdrop-blur-xs border-b border-black/15 text-neutral-900 dark:text-neutral-100"
+    : isDarkActive
     ? "bg-[#161b22] border-b-2 border-neutral-700 text-neutral-200"
     : isSepiaActive
     ? "bg-[#f4ebd9] border-b-2 border-[#5c4028] text-[#382b22]"
@@ -288,17 +294,18 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
             ) : isReadonly ? (
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-neutral-200 dark:bg-neutral-800 border border-current/30 font-mono text-[11px] font-bold">
                 <Terminal size={12} weight="bold" />
-                <span>{SUPPORTED_LANGUAGES[normalizeLanguage(language)] || language || "Code"}</span>
+                <span>{SUPPORTED_LANGUAGES[effectiveLanguage] || effectiveLanguage}</span>
               </span>
             ) : (
               <div className="flex items-center gap-1">
                 <select
-                  value={normalizeLanguage(language)}
+                  value={effectiveLanguage}
                   onChange={handleLanguageChange}
                   className="px-2 py-0.5 text-[11px] font-mono font-bold bg-white dark:bg-neutral-800 text-black dark:text-white border border-black dark:border-neutral-600 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] outline-none cursor-pointer"
                   title="Pilih Bahasa Kode untuk Pewarnaan Sintaks"
                 >
-                  <option value="javascript">JavaScript</option>
+                  <option value="javascript">JavaScript (Default)</option>
+                  <option value="go">Go / Golang</option>
                   <option value="typescript">TypeScript</option>
                   <option value="tsx">React TSX</option>
                   <option value="jsx">React JSX</option>
@@ -310,7 +317,6 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
                   <option value="json">JSON</option>
                   <option value="yaml">YAML</option>
                   <option value="rust">Rust</option>
-                  <option value="go">Go</option>
                   <option value="java">Java</option>
                   <option value="c">C</option>
                   <option value="cpp">C++</option>
@@ -540,13 +546,8 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
         {/* ── Case 3: Raw Tiptap Editable Code Block ── */}
         {/* KEPT IN DOM ALWAYS so ProseMirror state, cursor and input mapping remain 100% stable */}
         <pre
-          className={`px-4 py-3 font-mono text-xs overflow-x-auto leading-relaxed border-t border-black/20 ${
-            isDarkActive
-              ? "bg-[#0d1117] text-neutral-100"
-              : isSepiaActive
-              ? "bg-[#fdf6e3] text-[#382b22]"
-              : "bg-neutral-950 text-neutral-100"
-          } ${
+          style={{ backgroundColor: "transparent" }}
+          className={`px-4 py-3 font-mono text-xs overflow-x-auto leading-relaxed border-t border-black/15 bg-transparent !bg-transparent text-neutral-900 dark:text-neutral-100 ${
             // Hide if we are showing the visual mermaid diagram OR showing the Shiki highlighted view
             (isMermaid && viewMode === "diagram") ||
             (!isMermaid && (isReadonly || viewMode === "highlight")) ||
@@ -557,7 +558,8 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
         >
           <NodeViewContent
             as="div"
-            className="outline-none block selection:bg-yellow-400 selection:text-black font-mono text-xs"
+            style={{ backgroundColor: "transparent" }}
+            className="outline-none block selection:bg-yellow-300 selection:text-black font-mono text-xs bg-transparent !bg-transparent text-inherit"
           />
         </pre>
       </div>
