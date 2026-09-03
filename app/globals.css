@@ -91,7 +91,8 @@
 /* Inline code */
 .tiptap code {
   font-family: Consolas, "Courier New", monospace;
-  background: #f0f0f0;
+  background: transparent;
+  color: #1e1e1e;
   border: 1px solid #d0d0d0;
   padding: 0.1em 0.4em;
   border-radius: 3px;
@@ -99,8 +100,8 @@
 }
 /* Code block */
 .tiptap pre {
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: transparent;
+  color: #1e1e1e;
   font-family: var(--font-geist-mono), Consolas, "Courier New", monospace;
   font-size: 0.8125rem;
   padding: 1rem 1.25rem;
@@ -115,8 +116,8 @@
   background: none;
   border: none;
   padding: 0;
-  color: inherit;
   font-size: inherit;
+  color: #1e1e1e;
 }
 .tiptap pre.bg-transparent,
 .tiptap pre[style*="background-color: transparent"] {
