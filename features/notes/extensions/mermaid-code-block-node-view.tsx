@@ -134,31 +134,34 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
     themeMode === "auto" ? detectedTheme : themeMode;
 
   // Execute Mermaid Render
-  const executeMermaidRender = useCallback(async (codeToRender: string) => {
-    if (!codeToRender.trim()) {
-      setSvg("");
-      setMermaidError(null);
-      return;
-    }
-
-    setIsRenderingMermaid(true);
-    try {
-      const result = await renderMermaidDiagram(uniqueId, codeToRender);
-      if (result.error) {
-        setMermaidError(result.error);
+  const executeMermaidRender = useCallback(
+    async (codeToRender: string, themeToUse: "light" | "dark" | "sepia") => {
+      if (!codeToRender.trim()) {
         setSvg("");
-      } else {
-        setSvg(result.svg);
         setMermaidError(null);
+        return;
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setMermaidError(msg);
-      setSvg("");
-    } finally {
-      setIsRenderingMermaid(false);
-    }
-  }, [uniqueId]);
+
+      setIsRenderingMermaid(true);
+      try {
+        const result = await renderMermaidDiagram(uniqueId, codeToRender, themeToUse);
+        if (result.error) {
+          setMermaidError(result.error);
+          setSvg("");
+        } else {
+          setSvg(result.svg);
+          setMermaidError(null);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setMermaidError(msg);
+        setSvg("");
+      } finally {
+        setIsRenderingMermaid(false);
+      }
+    },
+    [uniqueId]
+  );
 
   // Execute Shiki Highlight
   const executeShikiHighlight = useCallback(
@@ -194,7 +197,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
 
     renderTimeoutRef.current = setTimeout(() => {
       if (isMermaid) {
-        executeMermaidRender(codeContent);
+        executeMermaidRender(codeContent, activeEffectiveTheme);
       }
       executeShikiHighlight(codeContent, language, activeEffectiveTheme, showLineNumbers);
     }, 200);
@@ -496,7 +499,15 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
 
         {/* ── Case 1: Visual Mermaid Diagram View ── */}
         {isMermaid && viewMode === "diagram" && (
-          <div className="p-4 bg-white dark:bg-neutral-950 min-h-[140px] flex flex-col items-center justify-center relative overflow-hidden">
+          <div
+            className={`p-4 min-h-[140px] flex flex-col items-center justify-center relative ${
+              isDarkActive
+                ? "bg-[#09090b]"
+                : isSepiaActive
+                ? "bg-[#fdf8ee]"
+                : "bg-white"
+            }`}
+          >
             {mermaidError ? (
               <div className="w-full p-3 bg-red-50 dark:bg-red-950/40 border-2 border-red-500 text-red-900 dark:text-red-200 text-xs font-mono space-y-1">
                 <div className="flex items-center gap-1.5 font-bold text-red-700 dark:text-red-300">
@@ -515,7 +526,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
               </div>
             ) : svg ? (
               <div
-                className="w-full flex items-center justify-center overflow-x-auto py-2 [&_svg]:max-w-full [&_svg]:h-auto transition-transform"
+                className="w-full flex items-center justify-center overflow-x-auto py-2 [&_svg]:max-w-full [&_svg]:h-auto transition-transform scrollbar-thin"
                 dangerouslySetInnerHTML={{ __html: svg }}
               />
             ) : isRenderingMermaid ? (
