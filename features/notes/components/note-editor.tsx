@@ -7,6 +7,8 @@ import { Table } from "@tiptap/extension-table/table";
 import { TableRow } from "@tiptap/extension-table/row";
 import { TableHeader } from "@tiptap/extension-table/header";
 import { TableCell } from "@tiptap/extension-table/cell";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { updateNoteAction } from "@/features/notes/actions/update-note.action";
 import {
@@ -22,13 +24,21 @@ import {
   CircleNotch,
   Image as ImageIcon,
   TreeStructure,
+  MarkdownLogo,
+  ClipboardText,
+  X,
 } from "@phosphor-icons/react";
+import { Markdown } from "@tiptap/markdown";
 import { CustomImage } from "@/features/notes/extensions/custom-image-extension";
 import { MermaidCodeBlock } from "@/features/notes/extensions/mermaid-code-block-extension";
 import {
   optimizeImageToWebP,
   formatFileSize,
 } from "@/features/notes/utils/image-optimizer";
+import {
+  isMarkdownContent,
+  formatMarkdownForClipboard,
+} from "@/features/notes/utils/markdown-clipboard-utils";
 import { uploadClientFile } from "@/lib/imagekit/client-upload";
 import type { Note } from "@/lib/db/schema";
 
@@ -48,9 +58,17 @@ const editorExtensions = [
   StarterKit.configure({
     codeBlock: false,
   }),
+  Markdown.configure({
+    indentation: {
+      style: "space",
+      size: 2,
+    },
+  }),
   MermaidCodeBlock,
   Underline,
   CustomImage,
+  TaskList,
+  TaskItem.configure({ nested: true }),
   Table.configure({ resizable: true }),
   TableRow,
   TableHeader,
@@ -94,6 +112,10 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     title: note.title,
     content: initialContent,
   });
+
+  const editorRef = useRef<ReturnType<typeof useEditor>>(null);
+  const [isInsertMarkdownOpen, setIsInsertMarkdownOpen] = useState(false);
+  const [markdownInput, setMarkdownInput] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -184,20 +206,35 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     content: (unlockedContent as Record<string, unknown>) ?? "",
     editorProps: {
       handlePaste(view, event) {
+        // 1. Cek file gambar (alur ImageKit)
         const items = event.clipboardData?.items;
-        if (!items) return false;
-
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-          if (item.type.startsWith("image/")) {
-            const file = item.getAsFile();
-            if (file) {
-              event.preventDefault();
-              handleImageProcessAndInsertRef.current?.(file);
-              return true;
+        if (items) {
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.type.startsWith("image/")) {
+              const file = item.getAsFile();
+              if (file) {
+                event.preventDefault();
+                handleImageProcessAndInsertRef.current?.(file);
+                return true;
+              }
             }
           }
         }
+
+        // 2. Deteksi dan proses langsung paste teks Markdown
+        const plainText = event.clipboardData?.getData("text/plain");
+        if (plainText && isMarkdownContent(plainText)) {
+          event.preventDefault();
+          if (editorRef.current) {
+            editorRef.current.commands.insertContent(plainText, {
+              contentType: "markdown",
+            });
+            toast.success("Konten Markdown berhasil ditempelkan!");
+            return true;
+          }
+        }
+
         return false;
       },
       handleDrop(view, event, _slice, moved) {
@@ -232,6 +269,47 @@ export function NoteEditor({ note, isLocked = false }: Props) {
     },
     immediatelyRender: false,
   });
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+
+  /**
+   * Menyalin seluruh isi catatan berformat Markdown ke clipboard.
+   */
+  const handleCopyAsMarkdown = useCallback(async () => {
+    if (!editor) return;
+    try {
+      const mdBody =
+        typeof editor.getMarkdown === "function" ? editor.getMarkdown() : "";
+      const fullMarkdown = formatMarkdownForClipboard(title, mdBody);
+      await navigator.clipboard.writeText(fullMarkdown);
+      toast.success("Seluruh catatan berhasil disalin sebagai Markdown!");
+    } catch {
+      toast.error("Gagal menyalin catatan sebagai Markdown.");
+    }
+  }, [editor, title]);
+
+  /**
+   * Menyisipkan teks Markdown langsung ke posisi kursor editor.
+   */
+  const handleInsertMarkdownSubmit = useCallback(() => {
+    if (!markdownInput.trim()) {
+      toast.error("Teks Markdown tidak boleh kosong.");
+      return;
+    }
+    if (!editor) return;
+    try {
+      editor.commands.insertContent(markdownInput, {
+        contentType: "markdown",
+      });
+      toast.success("Markdown berhasil disisipkan ke dalam catatan!");
+      setIsInsertMarkdownOpen(false);
+      setMarkdownInput("");
+    } catch {
+      toast.error("Gagal menyisipkan Markdown.");
+    }
+  }, [editor, markdownInput]);
 
   /**
    * Alur terpusat untuk memproses, mengompresi ke WebP 80%, dan mengunggah gambar ke ImageKit
@@ -641,6 +719,29 @@ export function NoteEditor({ note, isLocked = false }: Props) {
         action: () => editor.chain().focus().redo().run(),
       },
     ],
+    // Markdown Developer Tools
+    [
+      {
+        label: (
+          <span className="flex items-center gap-1 font-bold text-neutral-800">
+            <MarkdownLogo size={14} weight="bold" />
+            <span>Salin MD</span>
+          </span>
+        ),
+        title: "Salin seluruh catatan sebagai Markdown ke clipboard",
+        action: handleCopyAsMarkdown,
+      },
+      {
+        label: (
+          <span className="flex items-center gap-1 font-bold text-neutral-800">
+            <ClipboardText size={14} weight="bold" />
+            <span>Sisipkan MD</span>
+          </span>
+        ),
+        title: "Buka dialog untuk menyisipkan snippet Markdown",
+        action: () => setIsInsertMarkdownOpen(true),
+      },
+    ],
   ];
 
   return (
@@ -738,6 +839,68 @@ export function NoteEditor({ note, isLocked = false }: Props) {
         editor={editor}
         className="flex-1 px-6 py-4 overflow-y-auto [&_.tiptap]:min-h-[300px] [&_.tiptap]:outline-none"
       />
+
+      {/* Insert Markdown Modal Dialog */}
+      {isInsertMarkdownOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-2xl bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-5 space-y-4">
+            <div className="flex items-center justify-between border-b-2 border-black pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-yellow-400 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                  <MarkdownLogo size={22} weight="bold" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-black">Sisipkan Konten Markdown</h3>
+                  <p className="text-[11px] text-neutral-600">
+                    Tempel teks Markdown (heading, table, list, code block, mermaid) untuk langsung dirender.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsInsertMarkdownOpen(false)}
+                className="p-1 border border-black hover:bg-neutral-100 cursor-pointer"
+                title="Tutup"
+              >
+                <X size={18} weight="bold" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <textarea
+                value={markdownInput}
+                onChange={(e) => setMarkdownInput(e.target.value)}
+                placeholder={`# Heading\n\nParagraf dengan **tebal**, *miring*, dan \`code\`.\n\n- [ ] Task 1\n- [x] Task 2 selesai\n\n\`\`\`mermaid\nflowchart TD\n    A[Mulai] --> B[Selesai]\n\`\`\``}
+                rows={10}
+                className="w-full p-3 font-mono text-xs border-2 border-black focus:outline-none focus:bg-yellow-50/50 resize-y leading-relaxed"
+                autoFocus
+              />
+              <div className="flex justify-between items-center text-[10px] text-neutral-500 font-mono">
+                <span>Tip: Teks Markdown juga dapat ditempelkan langsung (Ctrl+V) ke editor.</span>
+                <span>{markdownInput.split("\n").length} baris | {markdownInput.length} karakter</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/15">
+              <button
+                type="button"
+                onClick={() => setIsInsertMarkdownOpen(false)}
+                className="px-3 py-1.5 text-xs font-bold border border-black bg-white hover:bg-neutral-100 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleInsertMarkdownSubmit}
+                disabled={!markdownInput.trim()}
+                className="px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform cursor-pointer disabled:opacity-50"
+              >
+                Sisipkan ke Catatan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

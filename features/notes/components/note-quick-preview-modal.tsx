@@ -22,6 +22,10 @@ import {
   TreeStructure,
 } from "@phosphor-icons/react";
 
+import { Markdown } from "@tiptap/markdown";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+
 interface NoteQuickPreviewModalProps {
   note: EnrichedNote | null;
   folder?: Folder;
@@ -33,9 +37,17 @@ const previewExtensions = [
   StarterKit.configure({
     codeBlock: false,
   }),
+  Markdown.configure({
+    indentation: {
+      style: "space",
+      size: 2,
+    },
+  }),
   MermaidCodeBlock,
   Underline,
   CustomImage,
+  TaskList,
+  TaskItem.configure({ nested: true }),
   Table.configure({ resizable: false }),
   TableRow,
   TableHeader,

@@ -129,13 +129,29 @@ function mergeTiptapContents(serverContent: unknown, localDraft: unknown): unkno
   };
 }
 
+import { Markdown } from "@tiptap/markdown";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import {
+  isMarkdownContent,
+  formatMarkdownForClipboard,
+} from "@/features/notes/utils/markdown-clipboard-utils";
+
 const editorExtensions = [
   StarterKit.configure({
     codeBlock: false,
   }),
+  Markdown.configure({
+    indentation: {
+      style: "space",
+      size: 2,
+    },
+  }),
   MermaidCodeBlock,
   Underline,
   CustomImage,
+  TaskList,
+  TaskItem.configure({ nested: true }),
   Table.configure({ resizable: true }),
   TableRow,
   TableHeader,
@@ -293,10 +309,29 @@ export function PublicNoteViewer({
     [isEditable, slug, noteId, sessionPassword]
   );
 
+  const editorRef = useRef<ReturnType<typeof useEditor>>(null);
+
   const editor = useEditor({
     extensions: editorExtensions,
     content: parseNoteContent(initialContent),
     editable: isEditable && unlocked && activeViewMode === "edit",
+    editorProps: {
+      handlePaste(view, event) {
+        if (!isEditable) return false;
+        const plainText = event.clipboardData?.getData("text/plain");
+        if (plainText && isMarkdownContent(plainText)) {
+          event.preventDefault();
+          if (editorRef.current) {
+            editorRef.current.commands.insertContent(plainText, {
+              contentType: "markdown",
+            });
+            toast.success("Konten Markdown berhasil ditempelkan!");
+            return true;
+          }
+        }
+        return false;
+      },
+    },
     onUpdate({ editor: currentEditor }) {
       if (isRemoteApplyingRef.current) return;
       lastUserTypingTimeRef.current = Date.now();
@@ -305,6 +340,10 @@ export function PublicNoteViewer({
     },
     immediatelyRender: false,
   });
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   // Keep editor editable property synchronized
   useEffect(() => {
@@ -558,15 +597,22 @@ export function PublicNoteViewer({
   const handleCopyText = async () => {
     if (!unlocked) {
       toast.error("Catatan terkunci belum dapat disalin.");
+      return;
     }
 
     try {
-      const rawText = `${title || "Catatan Tanpa Judul"}\n\n${extractPlainText(
-        content
-      )}`;
+      let rawText = "";
+      if (editor && typeof editor.getMarkdown === "function") {
+        const mdBody = editor.getMarkdown();
+        rawText = formatMarkdownForClipboard(title, mdBody);
+      } else {
+        rawText = `${title || "Catatan Tanpa Judul"}\n\n${extractPlainText(
+          content
+        )}`;
+      }
       await navigator.clipboard.writeText(rawText);
       setIsCopied(true);
-      toast.success("Teks catatan berhasil disalin ke clipboard!");
+      toast.success("Catatan berhasil disalin sebagai Markdown ke clipboard!");
       setTimeout(() => setIsCopied(false), 2500);
     } catch {
       toast.error("Gagal menyalin teks catatan.");

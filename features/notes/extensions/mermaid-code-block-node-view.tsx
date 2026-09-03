@@ -526,7 +526,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
               </div>
             ) : svg ? (
               <div
-                className="w-full flex items-center justify-center overflow-x-auto py-2 [&_svg]:max-w-full [&_svg]:h-auto transition-transform scrollbar-thin"
+                className="w-full flex justify-center overflow-x-auto py-3 scrollbar-thin [&_svg]:max-w-none [&_svg]:h-auto transition-transform"
                 dangerouslySetInnerHTML={{ __html: svg }}
               />
             ) : isRenderingMermaid ? (
@@ -650,7 +650,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
             <div className="flex-1 overflow-auto p-6 flex items-center justify-center bg-neutral-50/50 dark:bg-neutral-950">
               <div
                 style={{ transform: `scale(${zoomScale})`, transformOrigin: "center center" }}
-                className="transition-transform duration-100 flex items-center justify-center [&_svg]:max-w-full [&_svg]:h-auto"
+                className="transition-transform duration-100 flex items-center justify-center [&_svg]:max-w-none [&_svg]:h-auto"
                 dangerouslySetInnerHTML={{ __html: svg }}
               />
             </div>

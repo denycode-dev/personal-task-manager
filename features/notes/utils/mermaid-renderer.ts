@@ -84,7 +84,18 @@ export function cleanMermaidCode(rawCode: string): string {
   const processedLines = lines.map((line) => {
     let l = line;
 
-    // Auto-quote edge labels: -- label --> or -. label .-> or == label ==>
+    // 1. Subgraph normalization:
+    // e.g. subgraph Backend Daily Worker (23:00 WIB)
+    const subgraphMatch = l.match(/^(\s*subgraph\s+)([^"\[\n]+)$/);
+    if (subgraphMatch) {
+      const prefix = subgraphMatch[1];
+      const rawTitle = subgraphMatch[2].trim();
+      if (/[()&/.:,;]/.test(rawTitle)) {
+        return `${prefix}"${rawTitle}"`;
+      }
+    }
+
+    // 2. Auto-quote edge labels: -- label --> or -. label .-> or == label ==>
     // e.g. I -- case <-time.After(waitDuration) --> J
     l = l.replace(
       /(\s--|\s\.-|\s==)\s+([^\s"][^\n\r]+?)\s+(-->|\.->|==>)/g,
@@ -100,7 +111,7 @@ export function cleanMermaidCode(rawCode: string): string {
       }
     );
 
-    // Auto-quote pipe edge labels: -->|label| or -.->|label|
+    // 3. Auto-quote pipe edge labels: -->|label| or -.->|label|
     // e.g. -->|case <-time.After(waitDuration)| or -->|Gap (Status Naik)|
     l = l.replace(
       /(-->|\.->|==>)\|([^"\n\r|]+?)\|/g,
@@ -116,7 +127,37 @@ export function cleanMermaidCode(rawCode: string): string {
       }
     );
 
-    // Auto-quote square bracket node labels: ID[label] where label is not quoted and has special chars
+    // 4. Auto-quote stadium node labels: ID([label])
+    l = l.replace(
+      /\b([a-zA-Z0-9_-]+)\(\[([^"\n\r\]]+?)\]\)/g,
+      (match, nodeId, label) => {
+        const trimmedLabel = label.trim();
+        if (trimmedLabel.startsWith('"') && trimmedLabel.endsWith('"')) {
+          return match;
+        }
+        if (/[&/().,]/.test(trimmedLabel)) {
+          return `${nodeId}(["${trimmedLabel}"])`;
+        }
+        return match;
+      }
+    );
+
+    // 5. Auto-quote rhombus/decision node labels: ID{label}
+    l = l.replace(
+      /\b([a-zA-Z0-9_-]+)\{([^"\n\r\}]+?)\}/g,
+      (match, nodeId, label) => {
+        const trimmedLabel = label.trim();
+        if (trimmedLabel.startsWith('"') && trimmedLabel.endsWith('"')) {
+          return match;
+        }
+        if (/[&/().,]/.test(trimmedLabel)) {
+          return `${nodeId}{"${trimmedLabel}"}`;
+        }
+        return match;
+      }
+    );
+
+    // 6. Auto-quote square bracket node labels: ID[label] where label is not quoted and has special chars
     // e.g. A[1. HR Tetapkan Keahlian Wajib Peran] or C[3. HR & Pimpinan Pantau di Dasbor / Daftar Talenta]
     l = l.replace(
       /\b([a-zA-Z0-9_-]+)\[([^"\n\r\]]+?)\]/g,
@@ -143,9 +184,9 @@ let currentConfiguredTheme: string | null = null;
 /**
  * Safely loads and initializes mermaid singleton instance on the client with the specified theme.
  */
-async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "light") {
+export async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "light") {
   if (typeof window === "undefined") {
-    throw new Error("Mermaid can only be initialized on the client side.");
+    return null;
   }
 
   const mermaidModule = await import("mermaid");
@@ -160,23 +201,24 @@ async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "light") {
           darkMode: true,
           background: "#09090b",
           primaryColor: "#ca8a04",
-          primaryTextColor: "#f4f4f5",
-          primaryBorderColor: "#71717a",
-          lineColor: "#e4e4e7",
+          primaryTextColor: "#fafafa",
+          primaryBorderColor: "#a1a1aa",
+          lineColor: "#f4f4f5",
+          textColor: "#fafafa",
           secondaryColor: "#27272a",
           tertiaryColor: "#18181b",
           edgeLabelBackground: "#18181b",
-          nodeBorder: "#71717a",
+          nodeBorder: "#a1a1aa",
           mainBkg: "#18181b",
           nodeTextColor: "#fafafa",
           clusterBkg: "#121215",
-          clusterBorder: "#52525b",
+          clusterBorder: "#71717a",
           titleColor: "#fafafa",
           actorBorder: "#ca8a04",
           actorBkg: "#27272a",
           actorTextColor: "#fafafa",
           labelBoxBkgColor: "#18181b",
-          labelBoxBorderColor: "#71717a",
+          labelBoxBorderColor: "#a1a1aa",
           labelTextColor: "#fafafa",
         }
       : isSepia
@@ -187,6 +229,7 @@ async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "light") {
           primaryTextColor: "#292524",
           primaryBorderColor: "#78350f",
           lineColor: "#451a03",
+          textColor: "#292524",
           secondaryColor: "#f5ebd8",
           tertiaryColor: "#ebe0cb",
           edgeLabelBackground: "#f5ebd8",
@@ -209,7 +252,8 @@ async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "light") {
           primaryColor: "#fef08a",
           primaryTextColor: "#171717",
           primaryBorderColor: "#000000",
-          lineColor: "#171717",
+          lineColor: "#000000",
+          textColor: "#171717",
           secondaryColor: "#ffffff",
           tertiaryColor: "#f3f4f6",
           edgeLabelBackground: "#ffffff",
@@ -247,15 +291,57 @@ async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "light") {
           rx: 3px;
           ry: 3px;
         }
+        /* ER Diagram High-Contrast Enhancements */
+        .entityBox {
+          fill: ${isDark ? "#27272a" : isSepia ? "#fcf7ed" : "#ffffff"} !important;
+          stroke: ${isDark ? "#e4e4e7" : isSepia ? "#78350f" : "#000000"} !important;
+          stroke-width: 1.5px !important;
+        }
+        .relationshipLine {
+          stroke: ${isDark ? "#f4f4f5" : isSepia ? "#451a03" : "#171717"} !important;
+          stroke-width: 1.5px !important;
+        }
+        .relationshipLabelBox {
+          fill: ${isDark ? "#18181b" : isSepia ? "#ebe0cb" : "#f3f4f6"} !important;
+          opacity: 0.95 !important;
+        }
+        .edgeLabel .label text, .edgeLabel text, .relationshipLabel {
+          fill: ${isDark ? "#ffffff" : isSepia ? "#292524" : "#000000"} !important;
+          font-weight: 600 !important;
+          font-size: 12px !important;
+        }
+        .node.default text, .node text, .label {
+          fill: ${isDark ? "#ffffff" : isSepia ? "#292524" : "#000000"} !important;
+          font-weight: 600 !important;
+        }
+        .marker {
+          stroke: ${isDark ? "#f4f4f5" : isSepia ? "#451a03" : "#171717"} !important;
+          fill: ${isDark ? "#f4f4f5" : isSepia ? "#451a03" : "#171717"} !important;
+        }
+        /* Prevent external or global paragraph styles from introducing rogue vertical spacing inside nodes */
+        .node foreignObject, .label foreignObject {
+          overflow: visible !important;
+        }
+        .node foreignObject p, .label foreignObject p, .edgeLabel foreignObject p {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.35 !important;
+        }
       `,
       flowchart: {
         curve: "linear", // linear prevents cycle loops from slicing through nodes
         htmlLabels: true,
         subGraphTitleMargin: { top: 12, bottom: 8 },
-        padding: 16,
+        padding: 12,
+        nodeSpacing: 40,
+        rankSpacing: 40,
+        useMaxWidth: false,
+      },
+      er: {
+        useMaxWidth: false,
       },
       sequence: {
-        useMaxWidth: true,
+        useMaxWidth: false,
       },
     });
 
@@ -285,6 +371,9 @@ export async function renderMermaidDiagram(
 
   try {
     const mermaid = await getMermaidInstance(theme);
+    if (!mermaid) {
+      return { svg: "", error: "Mermaid hanya dapat berjalan di browser." };
+    }
     const sanitizedId = `mermaid-${id.replace(/[^a-zA-Z0-9_-]/g, "_")}-${Math.random().toString(36).substring(2, 7)}`;
 
     // Validate syntax before rendering if parse is available
