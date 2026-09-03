@@ -37,8 +37,10 @@ import {
   ArrowsDownUp,
   FileArrowUp,
   FileArrowDown,
+  Eye,
 } from "@phosphor-icons/react";
 import { FolderShareDialog } from "@/features/folders/components/folder-share-dialog";
+import { NoteQuickPreviewModal } from "@/features/notes/components/note-quick-preview-modal";
 
 interface NotesExplorerProps {
   initialNotes: EnrichedNote[];
@@ -80,6 +82,7 @@ export function NotesExplorer({
     (initialView as NoteViewMode) || "grid"
   );
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [previewNote, setPreviewNote] = useState<EnrichedNote | null>(null);
 
   const hierarchicalFolders = useMemo(() => {
     return folderService.getFolderHierarchy(folders);
@@ -740,6 +743,18 @@ export function NotesExplorer({
                           Publik
                         </span>
                       )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setPreviewNote(note);
+                        }}
+                        className="w-7 h-7 inline-flex items-center justify-center bg-white hover:bg-yellow-200 text-neutral-800 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all rounded-xs cursor-pointer"
+                        title="Pratinjau Catatan & Diagram"
+                      >
+                        <Eye size={13} weight="bold" />
+                      </button>
                       {!note.isLocked && (
                         <button
                           type="button"
@@ -940,6 +955,19 @@ export function NotesExplorer({
 
                     {/* Col 4: Actions Toolbar */}
                     <div className="col-span-2 flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setPreviewNote(note);
+                        }}
+                        className="w-7 h-7 inline-flex items-center justify-center bg-white hover:bg-yellow-200 text-neutral-800 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all rounded-xs cursor-pointer"
+                        title="Pratinjau Catatan & Diagram"
+                      >
+                        <Eye size={13} weight="bold" />
+                      </button>
+
                       <Link
                         href={`/notes/${note.id}`}
                         className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-400 hover:bg-yellow-300 border-2 border-black text-xs font-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all cursor-pointer"
@@ -1072,6 +1100,19 @@ export function NotesExplorer({
 
                       {/* Right: Actions (Buka, Export, Delete) */}
                       <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setPreviewNote(note);
+                          }}
+                          className="w-7 h-7 inline-flex items-center justify-center bg-white hover:bg-yellow-200 text-neutral-800 border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all rounded-xs cursor-pointer"
+                          title="Pratinjau Catatan & Diagram"
+                        >
+                          <Eye size={13} weight="bold" />
+                        </button>
+
                         <Link
                           href={`/notes/${note.id}`}
                           className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-400 hover:bg-yellow-300 border-2 border-black text-xs font-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all cursor-pointer"
@@ -1118,6 +1159,14 @@ export function NotesExplorer({
           </ul>
         </div>
       )}
+
+      {/* Modal Pratinjau Cepat Catatan & Diagram Mermaid */}
+      <NoteQuickPreviewModal
+        note={previewNote}
+        folder={folders.find((f) => f.id === previewNote?.folderId)}
+        isOpen={!!previewNote}
+        onClose={() => setPreviewNote(null)}
+      />
     </div>
   );
 }

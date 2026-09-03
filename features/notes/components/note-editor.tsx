@@ -21,8 +21,10 @@ import {
   ShieldCheck,
   CircleNotch,
   Image as ImageIcon,
+  TreeStructure,
 } from "@phosphor-icons/react";
 import { CustomImage } from "@/features/notes/extensions/custom-image-extension";
+import { MermaidCodeBlock } from "@/features/notes/extensions/mermaid-code-block-extension";
 import {
   optimizeImageToWebP,
   formatFileSize,
@@ -44,8 +46,9 @@ type ToolbarBtn = {
 
 const editorExtensions = [
   StarterKit.configure({
-    codeBlock: { HTMLAttributes: { class: "not-prose" } },
+    codeBlock: false,
   }),
+  MermaidCodeBlock,
   Underline,
   CustomImage,
   Table.configure({ resizable: true }),
@@ -533,7 +536,35 @@ export function NoteEditor({ note, isLocked = false }: Props) {
         label: "</>",
         title: "Code block",
         action: () => editor.chain().focus().toggleCodeBlock().run(),
-        active: editor.isActive("codeBlock"),
+        active: editor.isActive("codeBlock") && editor.getAttributes("codeBlock").language !== "mermaid",
+      },
+      {
+        label: (
+          <span className="flex items-center gap-1">
+            <TreeStructure size={13} weight="bold" />
+            <span>Diagram</span>
+          </span>
+        ),
+        title: "Sisipkan Diagram Mermaid",
+        action: () => {
+          editor
+            .chain()
+            .focus()
+            .insertContent({
+              type: "codeBlock",
+              attrs: { language: "mermaid" },
+              content: [
+                {
+                  type: "text",
+                  text: "graph TD\n    A[Mulai] --> B{Keputusan}\n    B -->|Ya| C[Lanjutkan]\n    B -->|Tidak| D[Selesai]",
+                },
+              ],
+            })
+            .run();
+        },
+        active:
+          editor.isActive("codeBlock") &&
+          editor.getAttributes("codeBlock").language === "mermaid",
       },
       {
         label: "code",

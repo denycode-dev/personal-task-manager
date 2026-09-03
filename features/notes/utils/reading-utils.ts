@@ -74,6 +74,21 @@ export function extractPlainText(content: unknown): string {
         return textParts.join("") + "\n\n";
       }
 
+      if (node.type === "codeBlock") {
+        const attrs = (node as { attrs?: { language?: string } }).attrs;
+        const lang = attrs?.language?.toLowerCase();
+        const codeText = textParts.join("");
+        if (
+          lang === "mermaid" ||
+          codeText.trim().startsWith("graph ") ||
+          codeText.trim().startsWith("flowchart ") ||
+          codeText.trim().startsWith("sequenceDiagram")
+        ) {
+          return "[Diagram Mermaid] \n\n";
+        }
+        return codeText + "\n\n";
+      }
+
       if (node.type === "listItem") {
         return "• " + textParts.join("") + "\n";
       }

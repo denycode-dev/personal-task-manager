@@ -5,6 +5,7 @@ import { useEditor, EditorContent, type Content } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import { CustomImage } from "@/features/notes/extensions/custom-image-extension";
+import { MermaidCodeBlock } from "@/features/notes/extensions/mermaid-code-block-extension";
 import { Table } from "@tiptap/extension-table/table";
 import { TableRow } from "@tiptap/extension-table/row";
 import { TableHeader } from "@tiptap/extension-table/header";
@@ -62,8 +63,9 @@ interface PublicFolderViewerProps {
 
 const editorExtensions = [
   StarterKit.configure({
-    codeBlock: { HTMLAttributes: { class: "not-prose" } },
+    codeBlock: false,
   }),
+  MermaidCodeBlock,
   Underline,
   CustomImage,
   Table.configure({ resizable: false }),
