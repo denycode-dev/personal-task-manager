@@ -39,6 +39,9 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
   const codeContent = node.textContent || "";
   const uniqueId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const svgContainerRef = useRef<HTMLDivElement>(null);
+  const modalSvgContainerRef = useRef<HTMLDivElement>(null);
+  const bindFunctionsRef = useRef<((element: Element) => void) | null>(null);
 
   // Check if content is mermaid
   const isExplicitMermaid = language.toLowerCase() === "mermaid";
@@ -148,20 +151,44 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
         if (result.error) {
           setMermaidError(result.error);
           setSvg("");
+          bindFunctionsRef.current = null;
         } else {
           setSvg(result.svg);
           setMermaidError(null);
+          bindFunctionsRef.current = result.bindFunctions || null;
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         setMermaidError(msg);
         setSvg("");
+        bindFunctionsRef.current = null;
       } finally {
         setIsRenderingMermaid(false);
       }
     },
     [uniqueId]
   );
+
+  // Bind interactive events (clicks, links, tooltips) after SVG is inserted into DOM per Mermaid official docs
+  useEffect(() => {
+    if (svg && bindFunctionsRef.current && svgContainerRef.current) {
+      try {
+        bindFunctionsRef.current(svgContainerRef.current);
+      } catch {
+        // Silently ignore binding errors for diagrams without interactions
+      }
+    }
+  }, [svg, viewMode]);
+
+  useEffect(() => {
+    if (isModalOpen && svg && bindFunctionsRef.current && modalSvgContainerRef.current) {
+      try {
+        bindFunctionsRef.current(modalSvgContainerRef.current);
+      } catch {
+        // Silently ignore binding errors in modal
+      }
+    }
+  }, [isModalOpen, svg, zoomScale]);
 
   // Execute Shiki Highlight
   const executeShikiHighlight = useCallback(
@@ -526,6 +553,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
               </div>
             ) : svg ? (
               <div
+                ref={svgContainerRef}
                 className="w-full flex justify-center overflow-x-auto py-3 scrollbar-thin [&_svg]:max-w-none [&_svg]:h-auto transition-transform"
                 dangerouslySetInnerHTML={{ __html: svg }}
               />
@@ -649,6 +677,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
             {/* Modal Body with Zoomable SVG */}
             <div className="flex-1 overflow-auto p-6 flex items-center justify-center bg-neutral-50/50 dark:bg-neutral-950">
               <div
+                ref={modalSvgContainerRef}
                 style={{ transform: `scale(${zoomScale})`, transformOrigin: "center center" }}
                 className="transition-transform duration-100 flex items-center justify-center [&_svg]:max-w-none [&_svg]:h-auto"
                 dangerouslySetInnerHTML={{ __html: svg }}

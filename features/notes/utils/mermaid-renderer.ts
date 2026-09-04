@@ -61,122 +61,12 @@ export function isMermaidSyntax(code: string): boolean {
 }
 
 /**
- * Normalizes mermaid code by:
- * 1. Trimming extra blank lines and standardizing line breaks.
- * 2. Replacing non-breaking spaces and zero-width spaces that break lexers.
- * 3. Normalizing smart/curly quotes to standard ASCII quotes.
- * 4. Auto-quoting unquoted node labels with special characters (., &, /, (, ), etc.).
- * 5. Auto-quoting edge labels with arrows or parentheses like `<-`, `->`, `()`.
+ * Prepares raw Mermaid diagram code by trimming whitespace.
+ * Preserves syntax purely as written by the user according to official Mermaid documentation.
  */
 export function cleanMermaidCode(rawCode: string): string {
   if (!rawCode) return "";
-
-  const cleaned = rawCode
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, " ")
-    .replace(/[\u200b\u200c\u200d\ufeff]/g, "")
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201c\u201d]/g, '"');
-
-  // Split into lines to safely pre-process edge and node syntax
-  const lines = cleaned.split("\n");
-  const processedLines = lines.map((line) => {
-    let l = line;
-
-    // 1. Subgraph normalization:
-    // e.g. subgraph Backend Daily Worker (23:00 WIB)
-    const subgraphMatch = l.match(/^(\s*subgraph\s+)([^"\[\n]+)$/);
-    if (subgraphMatch) {
-      const prefix = subgraphMatch[1];
-      const rawTitle = subgraphMatch[2].trim();
-      if (/[()&/.:,;]/.test(rawTitle)) {
-        return `${prefix}"${rawTitle}"`;
-      }
-    }
-
-    // 2. Auto-quote edge labels: -- label --> or -. label .-> or == label ==>
-    // e.g. I -- case <-time.After(waitDuration) --> J
-    l = l.replace(
-      /(\s--|\s\.-|\s==)\s+([^\s"][^\n\r]+?)\s+(-->|\.->|==>)/g,
-      (match, start, label, end) => {
-        const trimmedLabel = label.trim();
-        if (
-          !trimmedLabel.startsWith('"') &&
-          /[<>()&/|]/.test(trimmedLabel)
-        ) {
-          return `${start} "${trimmedLabel}" ${end}`;
-        }
-        return match;
-      }
-    );
-
-    // 3. Auto-quote pipe edge labels: -->|label| or -.->|label|
-    // e.g. -->|case <-time.After(waitDuration)| or -->|Gap (Status Naik)|
-    l = l.replace(
-      /(-->|\.->|==>)\|([^"\n\r|]+?)\|/g,
-      (match, arrow, label) => {
-        const trimmedLabel = label.trim();
-        if (
-          !trimmedLabel.startsWith('"') &&
-          /[<>()&/]/.test(trimmedLabel)
-        ) {
-          return `${arrow}|"${trimmedLabel}"|`;
-        }
-        return match;
-      }
-    );
-
-    // 4. Auto-quote stadium node labels: ID([label])
-    l = l.replace(
-      /\b([a-zA-Z0-9_-]+)\(\[([^"\n\r\]]+?)\]\)/g,
-      (match, nodeId, label) => {
-        const trimmedLabel = label.trim();
-        if (trimmedLabel.startsWith('"') && trimmedLabel.endsWith('"')) {
-          return match;
-        }
-        if (/[&/().,]/.test(trimmedLabel)) {
-          return `${nodeId}(["${trimmedLabel}"])`;
-        }
-        return match;
-      }
-    );
-
-    // 5. Auto-quote rhombus/decision node labels: ID{label}
-    l = l.replace(
-      /\b([a-zA-Z0-9_-]+)\{([^"\n\r\}]+?)\}/g,
-      (match, nodeId, label) => {
-        const trimmedLabel = label.trim();
-        if (trimmedLabel.startsWith('"') && trimmedLabel.endsWith('"')) {
-          return match;
-        }
-        if (/[&/().,]/.test(trimmedLabel)) {
-          return `${nodeId}{"${trimmedLabel}"}`;
-        }
-        return match;
-      }
-    );
-
-    // 6. Auto-quote square bracket node labels: ID[label] where label is not quoted and has special chars
-    // e.g. A[1. HR Tetapkan Keahlian Wajib Peran] or C[3. HR & Pimpinan Pantau di Dasbor / Daftar Talenta]
-    l = l.replace(
-      /\b([a-zA-Z0-9_-]+)\[([^"\n\r\]]+?)\]/g,
-      (match, nodeId, label) => {
-        const trimmedLabel = label.trim();
-        if (trimmedLabel.startsWith('"') && trimmedLabel.endsWith('"')) {
-          return match;
-        }
-        if (/[&/().,]/.test(trimmedLabel)) {
-          return `${nodeId}["${trimmedLabel}"]`;
-        }
-        return match;
-      }
-    );
-
-    return l;
-  });
-
-  return processedLines.join("\n").trim();
+  return rawCode.trim();
 }
 
 let currentConfiguredTheme: string | null = null;
@@ -353,11 +243,12 @@ export async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "li
 
 export interface MermaidRenderResult {
   svg: string;
+  bindFunctions?: (element: Element) => void;
   error?: string;
 }
 
 /**
- * Renders a Mermaid diagram string into an SVG output.
+ * Renders a Mermaid diagram string into an SVG output according to official Mermaid API specs.
  */
 export async function renderMermaidDiagram(
   id: string,
@@ -369,12 +260,13 @@ export async function renderMermaidDiagram(
     return { svg: "", error: "Kode diagram kosong." };
   }
 
+  const sanitizedId = `mermaid-${id.replace(/[^a-zA-Z0-9_-]/g, "_")}-${Math.random().toString(36).substring(2, 7)}`;
+
   try {
     const mermaid = await getMermaidInstance(theme);
     if (!mermaid) {
       return { svg: "", error: "Mermaid hanya dapat berjalan di browser." };
     }
-    const sanitizedId = `mermaid-${id.replace(/[^a-zA-Z0-9_-]/g, "_")}-${Math.random().toString(36).substring(2, 7)}`;
 
     // Validate syntax before rendering if parse is available
     if (typeof mermaid.parse === "function") {
@@ -389,12 +281,12 @@ export async function renderMermaidDiagram(
       }
     }
 
-    const { svg } = await mermaid.render(sanitizedId, code);
-    return { svg };
+    const { svg, bindFunctions } = await mermaid.render(sanitizedId, code);
+    return { svg, bindFunctions };
   } catch (err: unknown) {
     // Clean up any error element inserted into body by mermaid
     if (typeof document !== "undefined") {
-      const errEl = document.querySelector(`[id^="d${id}"]`);
+      const errEl = document.querySelector(`[id^="d${sanitizedId}"]`);
       if (errEl && errEl.parentNode) {
         errEl.parentNode.removeChild(errEl);
       }
