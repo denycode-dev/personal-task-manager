@@ -13,11 +13,14 @@ export const CustomImage = Image.extend({
 
   addAttributes() {
     return {
+      ...this.parent?.(),
       src: {
         default: null,
         parseHTML: (element) =>
           element.getAttribute("src") ||
+          element.getAttribute("data-src") ||
           element.querySelector("img")?.getAttribute("src") ||
+          element.querySelector("img")?.getAttribute("data-src") ||
           null,
         renderHTML: (attributes) => {
           if (!attributes.src) return {};
@@ -28,6 +31,7 @@ export const CustomImage = Image.extend({
         default: "Gambar Catatan",
         parseHTML: (element) =>
           element.getAttribute("alt") ||
+          element.getAttribute("data-alt") ||
           element.querySelector("img")?.getAttribute("alt") ||
           "Gambar Catatan",
         renderHTML: (attributes) => {
@@ -59,7 +63,7 @@ export const CustomImage = Image.extend({
         parseHTML: (element) =>
           element.getAttribute("data-width") ||
           element.querySelector("img")?.getAttribute("data-width") ||
-          element.style.width ||
+          element.style?.width ||
           "100%",
         renderHTML: (attributes) => {
           return {
@@ -102,22 +106,74 @@ export const CustomImage = Image.extend({
         getAttrs: (element) => {
           if (!(element instanceof HTMLElement)) return false;
           const img = element.querySelector("img");
-          if (!img) return false;
+          const src =
+            img?.getAttribute("src") ||
+            img?.getAttribute("data-src") ||
+            element.getAttribute("data-src") ||
+            null;
+          if (!src) return false;
           return {
-            src: img.getAttribute("src"),
-            alt: img.getAttribute("alt") || "Gambar Catatan",
-            fileId: img.getAttribute("data-file-id") || element.getAttribute("data-file-id"),
-            width: img.getAttribute("data-width") || element.getAttribute("data-width") || "100%",
-            alignment: element.getAttribute("data-alignment") || img.getAttribute("data-alignment") || "center",
-            caption: img.getAttribute("data-caption") || element.getAttribute("data-caption") || "",
+            src,
+            alt: img?.getAttribute("alt") || element.getAttribute("data-alt") || "Gambar Catatan",
+            fileId: img?.getAttribute("data-file-id") || element.getAttribute("data-file-id") || null,
+            width: img?.getAttribute("data-width") || element.getAttribute("data-width") || element.style.width || "100%",
+            alignment: element.getAttribute("data-alignment") || img?.getAttribute("data-alignment") || "center",
+            caption: img?.getAttribute("data-caption") || element.getAttribute("data-caption") || "",
+          };
+        },
+      },
+      {
+        tag: "div[data-node-view-wrapper]",
+        getAttrs: (element) => {
+          if (!(element instanceof HTMLElement)) return false;
+          const img = element.querySelector("img");
+          const src =
+            img?.getAttribute("src") ||
+            img?.getAttribute("data-src") ||
+            element.getAttribute("data-src") ||
+            null;
+          if (!src) return false;
+          return {
+            src,
+            alt: img?.getAttribute("alt") || "Gambar Catatan",
+            fileId: img?.getAttribute("data-file-id") || element.getAttribute("data-file-id") || null,
+            width: img?.getAttribute("data-width") || element.getAttribute("data-width") || "100%",
+            alignment: element.getAttribute("data-alignment") || img?.getAttribute("data-alignment") || "center",
+            caption: img?.getAttribute("data-caption") || element.getAttribute("data-caption") || "",
           };
         },
       },
       {
         tag: this.options.allowBase64 ? "img[src]" : 'img[src]:not([src^="data:"])',
+        getAttrs: (element) => {
+          if (!(element instanceof HTMLElement)) return false;
+          const src = element.getAttribute("src") || element.getAttribute("data-src") || null;
+          if (!src) return false;
+          return {
+            src,
+            alt: element.getAttribute("alt") || "Gambar Catatan",
+            fileId: element.getAttribute("data-file-id") || null,
+            width: element.getAttribute("data-width") || element.style.width || "100%",
+            alignment: element.getAttribute("data-alignment") || "center",
+            caption: element.getAttribute("data-caption") || "",
+          };
+        },
       },
       {
         tag: "img",
+        getAttrs: (element) => {
+          if (!(element instanceof HTMLElement)) return false;
+          const src = element.getAttribute("src") || element.getAttribute("data-src") || null;
+          if (!src) return false;
+          return {
+            src,
+            alt: element.getAttribute("alt") || "Gambar Catatan",
+            fileId: element.getAttribute("data-file-id") || null,
+            width: element.getAttribute("data-width") || element.style.width || "100%",
+            alignment: element.getAttribute("data-alignment") || "center",
+            caption: element.getAttribute("data-caption") || "",
+          };
+        },
       },
     ];
   },
@@ -139,6 +195,8 @@ export const CustomImage = Image.extend({
         class: `note-image-wrapper ${alignClass}`,
         "data-alignment": alignment,
         "data-width": width,
+        "data-src": (HTMLAttributes.src as string) || undefined,
+        "data-file-id": (HTMLAttributes["data-file-id"] as string) || undefined,
       },
       [
         "img",

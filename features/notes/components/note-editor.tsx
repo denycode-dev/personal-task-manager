@@ -352,6 +352,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
           fileId: uploaded.fileId || null,
           width: "100%",
           alignment: "center",
+          caption: "",
         };
 
         if (typeof position === "number") {
@@ -374,13 +375,18 @@ export function NoteEditor({ note, isLocked = false }: Props) {
             .run();
         }
 
+        // Cancel pending debounce timer so onUpdate doesn't overwrite with racing state
+        if (saveTimerRef.current) {
+          clearTimeout(saveTimerRef.current);
+          saveTimerRef.current = null;
+        }
+
         // Trigger immediate save to persist image node directly in database
         const currentJSON = editor.getJSON();
         latestDataRef.current = {
           title: titleRef.current,
           content: currentJSON,
         };
-        isDirtyRef.current = true;
         await saveImmediately(titleRef.current, currentJSON);
 
         const savingsText =

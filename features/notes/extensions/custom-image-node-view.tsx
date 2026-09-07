@@ -63,7 +63,13 @@ export function CustomImageNodeView(props: NodeViewProps) {
   };
 
   return (
-    <NodeViewWrapper className={`my-4 flex flex-col ${containerAlignClass} relative group`}>
+    <NodeViewWrapper
+      className={`note-image-wrapper my-4 flex flex-col ${containerAlignClass} relative group`}
+      data-alignment={alignment}
+      data-width={width}
+      data-src={src || undefined}
+      data-file-id={fileId || undefined}
+    >
       <div
         className={`relative inline-block border-2 transition-all duration-150 ${
           selected
@@ -206,6 +212,21 @@ export function CustomImageNodeView(props: NodeViewProps) {
                 <span>Hapus</span>
               </button>
             </div>
+
+            {/* Preserve hidden img in DOM during error state to maintain attributes on DOM serialization */}
+            {src && (
+              <img
+                src={src}
+                alt={alt || "Gambar Catatan"}
+                data-src={src}
+                data-file-id={fileId || undefined}
+                data-width={width}
+                data-alignment={alignment}
+                data-caption={caption || undefined}
+                className="hidden"
+                aria-hidden="true"
+              />
+            )}
           </div>
         ) : (
           /* Image Content */

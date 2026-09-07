@@ -70,7 +70,10 @@ function parseInlineMarkdown(text: string): TiptapNode[] {
         type: "image",
         attrs: {
           src: match[3].trim(),
-          alt: match[2]?.trim() || "",
+          alt: match[2]?.trim() || "Gambar Catatan",
+          width: "100%",
+          alignment: "center",
+          caption: "",
         },
       });
     } else if (fullMatch.startsWith("[") && match[3]) {
@@ -387,7 +390,24 @@ export function parseMarkdownToTiptap(
       continue;
     }
 
-    // 9. Standard Paragraph
+    // 9. Standalone Image Block
+    const blockImageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (blockImageMatch) {
+      tiptapNodes.push({
+        type: "image",
+        attrs: {
+          src: blockImageMatch[2].trim(),
+          alt: blockImageMatch[1]?.trim() || "Gambar Catatan",
+          width: "100%",
+          alignment: "center",
+          caption: "",
+        },
+      });
+      i++;
+      continue;
+    }
+
+    // 10. Standard Paragraph
     tiptapNodes.push({
       type: "paragraph",
       content: parseInlineMarkdown(trimmed),
