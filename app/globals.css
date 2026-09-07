@@ -177,9 +177,7 @@
 .mermaid-container,
 .mermaid {
   line-height: normal;
-  height: 350px;
   overflow: auto;
-  width: 100%;
 }
 
 [id^="dmermaid"] svg,
@@ -189,6 +187,18 @@ svg[id^="mermaid"],
   max-width: 100%;
   height: auto;
 }
+
+.mermaid-pan-zoom-viewport .mermaid-container {
+  overflow: visible !important;
+}
+
+.mermaid-pan-zoom-viewport .mermaid-container svg {
+  max-width: none !important;
+  height: auto;
+  user-select: none;
+  pointer-events: auto;
+}
+
 
 [id^="dmermaid"] foreignObject,
 svg[id^="mermaid"] foreignObject,

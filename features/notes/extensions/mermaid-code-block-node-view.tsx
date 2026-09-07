@@ -12,6 +12,7 @@ import {
   SUPPORTED_LANGUAGES,
   normalizeLanguage,
 } from "@/features/notes/utils/shiki-highlighter";
+import { MermaidPanZoomCanvas } from "@/features/notes/components/mermaid-pan-zoom-canvas";
 import {
   Code,
   Eye,
@@ -39,8 +40,6 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
   const codeContent = node.textContent || "";
   const uniqueId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const svgContainerRef = useRef<HTMLDivElement>(null);
-  const modalSvgContainerRef = useRef<HTMLDivElement>(null);
   const bindFunctionsRef = useRef<((element: Element) => void) | null>(null);
 
   // Check if content is mermaid
@@ -69,7 +68,6 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
   const [mermaidError, setMermaidError] = useState<string | null>(null);
   const [isRenderingMermaid, setIsRenderingMermaid] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [zoomScale, setZoomScale] = useState(1);
 
   // State for Shiki
   const [shikiHtml, setShikiHtml] = useState<string>("");
@@ -169,26 +167,19 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
     [uniqueId]
   );
 
-  // Bind interactive events (clicks, links, tooltips) after SVG is inserted into DOM per Mermaid official docs
-  useEffect(() => {
-    if (svg && bindFunctionsRef.current && svgContainerRef.current) {
-      try {
-        bindFunctionsRef.current(svgContainerRef.current);
-      } catch {
-        // Silently ignore binding errors for diagrams without interactions
-      }
-    }
-  }, [svg, viewMode]);
 
+
+  // Handle Escape key to close fullscreen modal
   useEffect(() => {
-    if (isModalOpen && svg && bindFunctionsRef.current && modalSvgContainerRef.current) {
-      try {
-        bindFunctionsRef.current(modalSvgContainerRef.current);
-      } catch {
-        // Silently ignore binding errors in modal
+    if (!isModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsModalOpen(false);
       }
-    }
-  }, [isModalOpen, svg, zoomScale]);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen]);
 
   // Execute Shiki Highlight
   const executeShikiHighlight = useCallback(
@@ -469,6 +460,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
             {isMermaid && svg && viewMode === "diagram" && (
               <>
                 <button
+                  suppressHydrationWarning
                   type="button"
                   onClick={() => setIsModalOpen(true)}
                   className="p-1.5 hover:bg-yellow-100 dark:hover:bg-neutral-700 border border-black/30 dark:border-neutral-600 hover:border-black bg-white dark:bg-neutral-800 transition-colors cursor-pointer"
@@ -477,6 +469,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
                   <ArrowsOut size={13} weight="bold" />
                 </button>
                 <button
+                  suppressHydrationWarning
                   type="button"
                   onClick={handleDownloadSvg}
                   className="p-1.5 hover:bg-yellow-100 dark:hover:bg-neutral-700 border border-black/30 dark:border-neutral-600 hover:border-black bg-white dark:bg-neutral-800 transition-colors cursor-pointer"
@@ -485,6 +478,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
                   <DownloadSimple size={13} weight="bold" />
                 </button>
                 <button
+                  suppressHydrationWarning
                   type="button"
                   onClick={handleCopySvg}
                   className="px-2 py-1 text-[11px] font-semibold hover:bg-yellow-100 dark:hover:bg-neutral-700 border border-black/30 dark:border-neutral-600 hover:border-black bg-white dark:bg-neutral-800 transition-colors cursor-pointer flex items-center gap-1"
@@ -527,7 +521,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
         {/* ── Case 1: Visual Mermaid Diagram View ── */}
         {isMermaid && viewMode === "diagram" && (
           <div
-            className={`p-4 min-h-[140px] flex flex-col items-center justify-center relative ${
+            className={`min-h-[140px] flex flex-col items-center justify-center relative ${
               isDarkActive
                 ? "bg-[#09090b]"
                 : isSepiaActive
@@ -543,6 +537,7 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
                 </div>
                 <p className="text-[11px] leading-relaxed break-words opacity-90">{mermaidError}</p>
                 <button
+                  suppressHydrationWarning
                   type="button"
                   onClick={() => setViewMode("code")}
                   className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white font-sans text-xs font-bold border border-black cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
@@ -552,10 +547,14 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
                 </button>
               </div>
             ) : svg ? (
-              <div
-                ref={svgContainerRef}
-                className="mermaid-container w-full flex justify-center overflow-x-auto py-3 scrollbar-thin [&_svg]:max-w-none [&_svg]:h-auto transition-transform"
-                dangerouslySetInnerHTML={{ __html: svg }}
+              <MermaidPanZoomCanvas
+                svg={svg}
+                theme={activeEffectiveTheme}
+                onOpenFullscreen={() => setIsModalOpen(true)}
+                onDownloadSvg={handleDownloadSvg}
+                onCopySvg={handleCopySvg}
+                isCopiedSvg={isCopiedSvg}
+                bindFunctions={bindFunctionsRef.current}
               />
             ) : isRenderingMermaid ? (
               <div className="py-8 flex flex-col items-center gap-2 text-neutral-500 text-xs font-mono">
@@ -603,70 +602,64 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
         </pre>
       </div>
 
-      {/* Fullscreen Zoom Modal for Large Diagrams */}
+      {/* Fullscreen Zoom & Pan Modal for Large Diagrams */}
       {isModalOpen && svg && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex flex-col p-4 sm:p-6 animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col p-2 sm:p-4 animate-in fade-in duration-150"
           onClick={() => setIsModalOpen(false)}
         >
           <div
-            className="flex-1 max-w-6xl w-full mx-auto bg-white dark:bg-neutral-900 border-3 border-black dark:border-neutral-600 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden"
+            className="flex-1 w-full max-w-7xl mx-auto bg-white dark:bg-neutral-900 border-3 border-black dark:border-neutral-600 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-yellow-300 border-b-2 border-black select-none">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-yellow-300 border-b-2 border-black select-none shrink-0">
               <div className="flex items-center gap-2">
                 <TreeStructure size={20} weight="bold" className="text-black" />
                 <h3 className="font-black text-sm text-black uppercase tracking-wide">
                   Pratinjau Diagram Mermaid
                 </h3>
+                <span className="hidden sm:inline text-[11px] font-mono font-bold bg-black text-yellow-300 px-2 py-0.5 ml-1 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                  Layar Penuh
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 bg-white border border-black px-1 py-0.5 text-xs font-mono">
-                  <button
-                    type="button"
-                    onClick={() => setZoomScale((z) => Math.max(0.5, z - 0.25))}
-                    className="p-1 hover:bg-neutral-100 cursor-pointer"
-                    title="Perkecil"
-                  >
-                    <MagnifyingGlassMinus size={14} weight="bold" />
-                  </button>
-                  <span className="px-1.5 font-bold min-w-[45px] text-center text-black">
-                    {Math.round(zoomScale * 100)}%
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setZoomScale((z) => Math.min(3, z + 0.25))}
-                    className="p-1 hover:bg-neutral-100 cursor-pointer"
-                    title="Perbesar"
-                  >
-                    <MagnifyingGlassPlus size={14} weight="bold" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setZoomScale(1)}
-                    className="p-1 hover:bg-neutral-100 cursor-pointer border-l border-neutral-300 ml-0.5"
-                    title="Reset Ukuran"
-                  >
-                    <ArrowCounterClockwise size={13} weight="bold" />
-                  </button>
-                </div>
-
                 <button
+                  suppressHydrationWarning
                   type="button"
                   onClick={handleDownloadSvg}
                   className="px-2.5 py-1 text-xs font-bold bg-white hover:bg-neutral-100 text-black border border-black flex items-center gap-1 cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
                 >
-                  <DownloadSimple size={13} weight="bold" />
-                  <span>Unduh SVG</span>
+                  <DownloadSimple size={14} weight="bold" />
+                  <span className="hidden sm:inline">Unduh SVG</span>
                 </button>
 
                 <button
+                  suppressHydrationWarning
+                  type="button"
+                  onClick={handleCopySvg}
+                  className="px-2.5 py-1 text-xs font-bold bg-white hover:bg-neutral-100 text-black border border-black flex items-center gap-1 cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  {isCopiedSvg ? (
+                    <>
+                      <Check size={14} weight="bold" className="text-green-600" />
+                      <span>SVG Tersalin</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} weight="bold" />
+                      <span>Salin SVG</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  suppressHydrationWarning
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="w-7 h-7 flex items-center justify-center bg-black hover:bg-neutral-800 text-white border border-black cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                  className="w-7 h-7 flex items-center justify-center bg-black hover:bg-neutral-800 text-white border border-black cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] ml-1"
                   title="Tutup (Esc)"
                 >
                   <X size={16} weight="bold" />
@@ -674,13 +667,13 @@ export function MermaidCodeBlockNodeView(props: NodeViewProps) {
               </div>
             </div>
 
-            {/* Modal Body with Zoomable SVG */}
-            <div className="flex-1 overflow-auto p-6 flex items-center justify-center bg-neutral-50/50 dark:bg-neutral-950">
-              <div
-                ref={modalSvgContainerRef}
-                style={{ transform: `scale(${zoomScale})`, transformOrigin: "center center" }}
-                className="mermaid-container transition-transform duration-100 flex items-center justify-center [&_svg]:max-w-none [&_svg]:h-auto"
-                dangerouslySetInnerHTML={{ __html: svg }}
+            {/* Modal Body with Fullscreen Interactive Canvas */}
+            <div className="flex-1 w-full h-full min-h-0 relative overflow-hidden">
+              <MermaidPanZoomCanvas
+                svg={svg}
+                theme={activeEffectiveTheme}
+                isFullscreen={true}
+                bindFunctions={bindFunctionsRef.current}
               />
             </div>
           </div>
