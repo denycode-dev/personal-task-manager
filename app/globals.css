@@ -173,22 +173,32 @@
 }
 
 /* ── Mermaid Diagram Rendering Isolation & Label Sizing Fix ─────────── */
+[id^="dmermaid"],
 .mermaid-container,
 .mermaid {
   line-height: normal;
+  height: 350px;
+  overflow: auto;
+  width: 100%;
 }
 
+[id^="dmermaid"] svg,
+svg[id^="mermaid"],
 .mermaid-container svg,
 .mermaid svg {
   max-width: 100%;
   height: auto;
 }
 
+[id^="dmermaid"] foreignObject,
+svg[id^="mermaid"] foreignObject,
 .mermaid-container foreignObject,
 .mermaid foreignObject {
   overflow: visible !important;
 }
 
+[id^="dmermaid"] foreignObject > div,
+svg[id^="mermaid"] foreignObject > div,
 .mermaid-container foreignObject > div,
 .mermaid foreignObject > div,
 .mermaid-container .node foreignObject div,

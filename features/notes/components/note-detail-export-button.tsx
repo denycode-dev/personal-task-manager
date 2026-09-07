@@ -37,6 +37,7 @@ export function NoteDetailExportButton({
 
   return (
     <button
+      suppressHydrationWarning
       type="button"
       onClick={handleExport}
       className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold border-2 border-black bg-lime-300 hover:bg-lime-200 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform cursor-pointer"

@@ -164,7 +164,7 @@ export async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "li
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: "loose",
-      htmlLabels: true,
+      htmlLabels: false,
       fontFamily:
         "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
       theme: "base",
@@ -209,7 +209,7 @@ export async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "li
           stroke: ${isDark ? "#f4f4f5" : isSepia ? "#451a03" : "#171717"} !important;
           fill: ${isDark ? "#f4f4f5" : isSepia ? "#451a03" : "#171717"} !important;
         }
-        /* Prevent foreignObject and HTML labels from inheriting or stretching to abnormal height */
+        /* Fallback: Prevent foreignObject and HTML labels from inheriting or stretching to abnormal height if invoked */
         .node foreignObject,
         .label foreignObject,
         .edgeLabel foreignObject,
@@ -238,7 +238,7 @@ export async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "li
       `,
       flowchart: {
         curve: "linear", // linear prevents cycle loops from slicing through nodes
-        htmlLabels: true,
+        htmlLabels: false, // Pure SVG text for flowcharts eliminates foreignObject box stretching
         subGraphTitleMargin: { top: 12, bottom: 8 },
         padding: 12,
         nodeSpacing: 40,
