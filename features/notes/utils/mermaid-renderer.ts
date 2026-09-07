@@ -164,6 +164,7 @@ export async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "li
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: "loose",
+      htmlLabels: true,
       fontFamily:
         "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
       theme: "base",
@@ -208,11 +209,28 @@ export async function getMermaidInstance(theme: "light" | "dark" | "sepia" = "li
           stroke: ${isDark ? "#f4f4f5" : isSepia ? "#451a03" : "#171717"} !important;
           fill: ${isDark ? "#f4f4f5" : isSepia ? "#451a03" : "#171717"} !important;
         }
-        /* Prevent external or global paragraph styles from introducing rogue vertical spacing inside nodes */
-        .node foreignObject, .label foreignObject {
+        /* Prevent foreignObject and HTML labels from inheriting or stretching to abnormal height */
+        .node foreignObject,
+        .label foreignObject,
+        .edgeLabel foreignObject,
+        foreignObject {
           overflow: visible !important;
         }
-        .node foreignObject p, .label foreignObject p, .edgeLabel foreignObject p {
+        .node foreignObject > div,
+        .label foreignObject > div,
+        .edgeLabel foreignObject > div,
+        foreignObject > div,
+        .nodeLabel,
+        .label span,
+        .label {
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          display: inline-block !important;
+        }
+        .node foreignObject p,
+        .label foreignObject p,
+        .edgeLabel foreignObject p {
           margin: 0 !important;
           padding: 0 !important;
           line-height: 1.35 !important;

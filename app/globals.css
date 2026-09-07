@@ -171,6 +171,38 @@
   border-right: 1px solid currentColor;
   flex-shrink: 0;
 }
+
+/* ── Mermaid Diagram Rendering Isolation & Label Sizing Fix ─────────── */
+.mermaid-container,
+.mermaid {
+  line-height: normal;
+}
+
+.mermaid-container svg,
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-container foreignObject,
+.mermaid foreignObject {
+  overflow: visible !important;
+}
+
+.mermaid-container foreignObject > div,
+.mermaid foreignObject > div,
+.mermaid-container .node foreignObject div,
+.mermaid .node foreignObject div,
+.mermaid-container .label,
+.mermaid .label,
+.mermaid-container .nodeLabel,
+.mermaid .nodeLabel {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  display: inline-block !important;
+}
+
 /* Responsive Image */
 .tiptap img {
   max-width: 100%;
