@@ -4,6 +4,8 @@
  * Provides caching, auto-language resolution, line-number formatting, and dual-theme support.
  */
 
+import { isMermaidSyntax } from "./mermaid-renderer";
+
 export type ShikiThemeMode = "light" | "dark" | "sepia" | "auto";
 
 export const SUPPORTED_LANGUAGES: Record<string, string> = {
@@ -143,36 +145,80 @@ export function isGolangSyntax(code: string): boolean {
 }
 
 /**
+ * Detects if a code snippet uses SQL syntax.
+ */
+export function isSqlSyntax(code: string): boolean {
+  if (!code || typeof code !== "string") return false;
+  const trimmed = code.trim();
+  return (
+    /\b(SELECT\s+[\s\S]+?\s+FROM|INSERT\s+INTO\s+[a-zA-Z0-9_]+|UPDATE\s+[a-zA-Z0-9_]+\s+SET|DELETE\s+FROM\s+[a-zA-Z0-9_]+|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\b/i.test(trimmed) ||
+    /^(BEGIN;|COMMIT;|CREATE\s+INDEX|DROP\s+INDEX)/im.test(trimmed)
+  );
+}
+
+/**
+ * Detects if a code snippet is valid JSON.
+ */
+export function isJsonSyntax(code: string): boolean {
+  if (!code || typeof code !== "string") return false;
+  const trimmed = code.trim();
+  if (
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    try {
+      JSON.parse(trimmed);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
  * Normalizes user-entered language name to a supported Shiki language.
- * If language is not specified or undetected, defaults to 'go' (if Go syntax detected)
- * or 'javascript' instead of 'text'.
+ * If language is not specified or undetected, attempts smart detection
+ * (mermaid diagrams, plain text for ASCII trees/schemas, SQL, Go, JSON) or defaults to 'javascript'.
  */
 export function normalizeLanguage(
   lang: string | null | undefined,
   codeContent?: string
 ): string {
-  if (
-    !lang ||
-    typeof lang !== "string" ||
-    lang.trim() === "" ||
-    lang.toLowerCase() === "text" ||
-    lang.toLowerCase() === "plaintext"
-  ) {
-    if (codeContent && isGolangSyntax(codeContent)) {
+  if (typeof lang === "string" && lang.trim() !== "") {
+    const clean = lang.trim().toLowerCase();
+    if (clean === "mermaid") return "mermaid";
+    if (clean === "golang") return "go";
+    if (clean === "text" || clean === "plaintext" || clean === "txt") return "text";
+    if (LANG_MAP[clean]) return LANG_MAP[clean];
+    if (SUPPORTED_LANGUAGES[clean]) return clean;
+  }
+
+  // If no language was explicitly specified (or empty), attempt smart detection from content
+  if (codeContent && typeof codeContent === "string") {
+    const trimmed = codeContent.trim();
+    // 1. Check for Mermaid diagrams first (before SQL / text)
+    if (isMermaidSyntax(trimmed)) {
+      return "mermaid";
+    }
+    // 2. Check for ASCII schema / tree diagrams / box drawing characters
+    if (/[├└│─┌┐┘┴┬┼║═╚╝╔╗]/.test(trimmed)) {
+      return "text";
+    }
+    // 3. Check for SQL syntax
+    if (isSqlSyntax(trimmed)) {
+      return "sql";
+    }
+    // 4. Check for Golang syntax
+    if (isGolangSyntax(trimmed)) {
       return "go";
     }
-    return "javascript";
+    // 5. Check for JSON syntax
+    if (isJsonSyntax(trimmed)) {
+      return "json";
+    }
   }
 
-  const clean = lang.trim().toLowerCase();
-  if (clean === "mermaid") return "mermaid";
-  if (clean === "golang") return "go";
-  if (LANG_MAP[clean]) return LANG_MAP[clean];
-  if (SUPPORTED_LANGUAGES[clean]) return clean;
-
-  if (codeContent && isGolangSyntax(codeContent)) {
-    return "go";
-  }
   return "javascript";
 }
 
