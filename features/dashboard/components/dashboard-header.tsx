@@ -25,7 +25,7 @@ export function DashboardHeader({
             Denycode Task Manager
           </span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-black">
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-black dark:text-foreground">
           {greeting},{" "}
           <span className="underline decoration-yellow-400 decoration-4 underline-offset-2">
             Deny
@@ -37,19 +37,19 @@ export function DashboardHeader({
       </div>
 
       <div className="flex flex-wrap items-center sm:flex-col sm:items-end gap-2 shrink-0">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-neutral-100 border-2 border-black text-xs font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-neutral-100 dark:bg-card border-2 border-black dark:border-border text-xs font-bold text-black dark:text-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
           <CalendarBlank size={15} weight="bold" />
           <span>{formattedDate}</span>
         </div>
 
         {urgentCount > 0 ? (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-800 border-2 border-black text-xs font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-            <WarningCircle size={15} weight="fill" className="text-rose-600" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 dark:border-rose-700/80 border-2 border-black text-xs font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <WarningCircle size={15} weight="fill" className="text-rose-600 dark:text-rose-400" />
             <span>{urgentCount} tugas mendesak (H-1)</span>
           </div>
         ) : (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 border-2 border-black text-xs font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-            <CheckCircle size={15} weight="fill" className="text-emerald-600" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200 dark:border-emerald-700/80 border-2 border-black text-xs font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <CheckCircle size={15} weight="fill" className="text-emerald-600 dark:text-emerald-400" />
             <span>Semua target terkendali</span>
           </div>
         )}

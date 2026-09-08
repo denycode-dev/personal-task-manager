@@ -9,17 +9,17 @@ export function DeadlineBadge({ deadline }: { deadline: Date | null | undefined 
   const map = {
     overdue: {
       label: "Terlambat",
-      className: "bg-red-500 text-white border-black",
+      className: "bg-red-500 text-white border-black dark:bg-red-600 dark:text-white dark:border-border",
       icon: WarningCircle,
     },
     today: {
       label: "Hari ini",
-      className: "bg-orange-400 text-black border-black",
+      className: "bg-orange-400 text-black border-black dark:bg-orange-500 dark:text-black dark:border-border",
       icon: Flame,
     },
     tomorrow: {
       label: "Besok",
-      className: "bg-yellow-400 text-black border-black",
+      className: "bg-yellow-400 text-black border-black dark:bg-yellow-400 dark:text-black dark:border-border",
       icon: Clock,
     },
   } as const;

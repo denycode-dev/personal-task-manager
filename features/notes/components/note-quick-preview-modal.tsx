@@ -104,18 +104,18 @@ export function NoteQuickPreviewModal({
       onClick={onClose}
     >
       <div
-        className="max-w-4xl w-full max-h-[90vh] bg-white border-3 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+        className="max-w-4xl w-full max-h-[90vh] bg-white dark:bg-card border-3 border-black dark:border-border shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-3.5 bg-yellow-300 border-b-2 border-black select-none">
+        <div className="flex items-center justify-between gap-3 px-5 py-3.5 bg-yellow-300 dark:bg-zinc-800 border-b-2 border-black dark:border-border select-none">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-black text-base sm:text-lg text-black truncate max-w-md">
+              <h2 className="font-black text-base sm:text-lg text-black dark:text-foreground truncate max-w-md">
                 {note.title || "Catatan tanpa judul"}
               </h2>
               {folder && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold bg-white text-neutral-800 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold bg-white dark:bg-zinc-700 text-neutral-800 dark:text-zinc-200 border border-black dark:border-border shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                   <FolderIcon size={12} weight="fill" style={{ color: folder.color }} />
                   <span>{folder.name}</span>
                 </span>
@@ -127,7 +127,7 @@ export function NoteQuickPreviewModal({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 text-xs text-neutral-800 mt-1 font-medium">
+            <div className="flex items-center gap-3 text-xs text-neutral-800 dark:text-zinc-300 mt-1 font-medium">
               <span className="flex items-center gap-1">
                 <CalendarBlank size={13} weight="bold" />
                 <span>
@@ -145,7 +145,7 @@ export function NoteQuickPreviewModal({
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href={`/notes/${note.id}`}
-              className="px-3 py-1.5 bg-black hover:bg-neutral-800 text-yellow-300 border border-black font-bold text-xs flex items-center gap-1.5 shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all cursor-pointer"
+              className="px-3 py-1.5 bg-black hover:bg-neutral-800 text-yellow-300 border border-black dark:border-border font-bold text-xs flex items-center gap-1.5 shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all cursor-pointer"
             >
               <span>Buka di Editor</span>
               <ArrowSquareOut size={14} weight="bold" />
@@ -154,7 +154,7 @@ export function NoteQuickPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center bg-white hover:bg-neutral-100 text-black border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center bg-white dark:bg-zinc-800 hover:bg-neutral-100 dark:hover:bg-zinc-700 text-black dark:text-foreground border-2 border-black dark:border-border shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
               title="Tutup (Esc)"
             >
               <X size={16} weight="bold" />
@@ -163,16 +163,16 @@ export function NoteQuickPreviewModal({
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 bg-white">
+        <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-card">
           {note.isLocked ? (
-            <div className="p-8 border-2 border-dashed border-neutral-300 text-center space-y-3 bg-neutral-50 my-6">
+            <div className="p-8 border-2 border-dashed border-neutral-300 dark:border-zinc-700 text-center space-y-3 bg-neutral-50 dark:bg-zinc-900 my-6">
               <div className="w-12 h-12 bg-neutral-900 text-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center mx-auto">
                 <Lock size={24} weight="fill" />
               </div>
-              <h4 className="font-black text-sm uppercase text-neutral-900">
+              <h4 className="font-black text-sm uppercase text-neutral-900 dark:text-foreground">
                 Catatan Terenkripsi (AES-256)
               </h4>
-              <p className="text-xs text-neutral-600 max-w-md mx-auto">
+              <p className="text-xs text-neutral-600 dark:text-zinc-300 max-w-md mx-auto">
                 Konten catatan ini diproteksi sandi. Silakan buka catatan di editor untuk memasukkan kata sandi pembuka.
               </p>
               <Link
@@ -191,15 +191,15 @@ export function NoteQuickPreviewModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-5 py-2.5 bg-neutral-100 border-t-2 border-black flex items-center justify-between text-xs text-neutral-600">
+        <div className="px-5 py-2.5 bg-neutral-100 dark:bg-zinc-900 border-t-2 border-black dark:border-border flex items-center justify-between text-xs text-neutral-600 dark:text-zinc-300">
           <span className="flex items-center gap-1 font-mono text-[11px]">
-            <TreeStructure size={14} weight="bold" className="text-neutral-800" />
+            <TreeStructure size={14} weight="bold" className="text-neutral-800 dark:text-zinc-300" />
             <span>Dukungan Diagram Mermaid & Format Kaya Aktif</span>
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1 text-xs font-bold bg-white hover:bg-neutral-200 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+            className="px-3 py-1 text-xs font-bold bg-white dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 text-neutral-900 dark:text-foreground border border-black dark:border-border shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
           >
             Tutup
           </button>

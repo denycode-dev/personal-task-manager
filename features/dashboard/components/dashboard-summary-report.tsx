@@ -36,8 +36,8 @@ export function DashboardSummaryReport({
   return (
     <section id="deadline-report" className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base sm:text-lg font-black uppercase tracking-tight text-black">
-          <Article size={20} weight="bold" className="text-black" />
+        <h2 className="flex items-center gap-2 text-base sm:text-lg font-black uppercase tracking-tight text-black dark:text-foreground">
+          <Article size={20} weight="bold" className="text-black dark:text-foreground" />
           Laporan Garis Besar (Executive Report)
         </h2>
         <span className="text-xs font-semibold text-muted-foreground hidden sm:inline">
@@ -47,14 +47,14 @@ export function DashboardSummaryReport({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* 1. Laporan Deadline Mendesak */}
-        <div className="flex flex-col justify-between p-5 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div className="flex flex-col justify-between p-5 border-2 border-black dark:border-border bg-white dark:bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           <div>
-            <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-3">
+            <div className="flex items-center justify-between border-b-2 border-black dark:border-border pb-3 mb-3">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 bg-rose-300 border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-black">
+                <span className="p-1.5 bg-rose-300 dark:bg-rose-950/80 border-2 border-black dark:border-rose-700/80 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-black dark:text-rose-300">
                   <ClockCountdown size={18} weight="bold" />
                 </span>
-                <h3 className="text-sm font-black uppercase tracking-wide text-black">
+                <h3 className="text-sm font-black uppercase tracking-wide text-black dark:text-foreground">
                   Prioritas Jatuh Tempo (H-1)
                 </h3>
               </div>
@@ -65,10 +65,10 @@ export function DashboardSummaryReport({
 
             {upcomingDeadlines.length === 0 ? (
               <div className="py-6 text-center space-y-2">
-                <div className="inline-flex p-2 bg-emerald-100 text-emerald-700 border-2 border-black rounded-full">
+                <div className="inline-flex p-2 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-2 border-black dark:border-emerald-700/60 rounded-full">
                   <CheckCircle size={24} weight="fill" />
                 </div>
-                <p className="text-xs font-bold text-black">
+                <p className="text-xs font-bold text-black dark:text-foreground">
                   Tidak ada deadline mendesak dalam 48 jam ke depan.
                 </p>
                 <p className="text-[11px] text-muted-foreground">
@@ -98,7 +98,7 @@ export function DashboardSummaryReport({
                     <Link
                       key={`${item.source}-${item.id}`}
                       href={href}
-                      className="group flex items-center justify-between gap-2 p-2.5 border-2 border-black bg-neutral-50 hover:bg-rose-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all text-xs"
+                      className="group flex items-center justify-between gap-2 p-2.5 border-2 border-black dark:border-border bg-neutral-50 dark:bg-zinc-900/70 hover:bg-rose-50 dark:hover:bg-zinc-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all text-xs"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span
@@ -106,7 +106,7 @@ export function DashboardSummaryReport({
                         >
                           {label}
                         </span>
-                        <span className="font-bold text-black truncate group-hover:underline">
+                        <span className="font-bold text-black dark:text-foreground truncate group-hover:underline">
                           {item.title}
                         </span>
                       </div>
@@ -120,10 +120,10 @@ export function DashboardSummaryReport({
             )}
           </div>
 
-          <div className="mt-4 pt-3 border-t-2 border-black/10 flex items-center justify-between">
+          <div className="mt-4 pt-3 border-t-2 border-black/10 dark:border-border flex items-center justify-between">
             <Link
               href="/calendar"
-              className="inline-flex items-center gap-1 text-xs font-bold text-black hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-bold text-black dark:text-foreground hover:underline"
             >
               <CalendarBlank size={14} weight="bold" />
               <span>Buka Linimasa Kalender</span>
@@ -137,14 +137,14 @@ export function DashboardSummaryReport({
         </div>
 
         {/* 2. Ringkasan Aktivitas Terkini */}
-        <div className="flex flex-col justify-between p-5 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div className="flex flex-col justify-between p-5 border-2 border-black dark:border-border bg-white dark:bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           <div>
-            <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-3">
+            <div className="flex items-center justify-between border-b-2 border-black dark:border-border pb-3 mb-3">
               <div className="flex items-center gap-2">
                 <span className="p-1.5 bg-yellow-300 border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-black">
                   <Article size={18} weight="bold" />
                 </span>
-                <h3 className="text-sm font-black uppercase tracking-wide text-black">
+                <h3 className="text-sm font-black uppercase tracking-wide text-black dark:text-foreground">
                   Ringkasan Aktivitas Terbaru
                 </h3>
               </div>
@@ -155,13 +155,13 @@ export function DashboardSummaryReport({
 
             <div className="space-y-2.5">
               {/* Catatan Terakhir */}
-              <div className="p-3 border-2 border-black bg-neutral-50 space-y-1.5">
-                <div className="flex items-center justify-between text-xs font-bold text-black">
+              <div className="p-3 border-2 border-black dark:border-border bg-neutral-50 dark:bg-zinc-900/70 space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-bold text-black dark:text-foreground">
                   <span className="flex items-center gap-1.5">
                     <NotePencil
                       size={15}
                       weight="bold"
-                      className="text-yellow-600"
+                      className="text-yellow-600 dark:text-yellow-400"
                     />
                     <span>Catatan Terbaru</span>
                   </span>
@@ -184,7 +184,7 @@ export function DashboardSummaryReport({
                         href={`/notes/${n.id}`}
                         className="flex items-center justify-between text-xs hover:underline decoration-1"
                       >
-                        <span className="font-semibold text-black truncate max-w-[200px] sm:max-w-[260px]">
+                        <span className="font-semibold text-black dark:text-foreground truncate max-w-[200px] sm:max-w-[260px]">
                           • {n.title || "Catatan tanpa judul"}
                         </span>
                         <span className="text-[10px] text-muted-foreground shrink-0">
@@ -202,15 +202,15 @@ export function DashboardSummaryReport({
               {/* Status Kanban & Checklist Teratas */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {/* Kanban Snapshot */}
-                <div className="p-2.5 border-2 border-black bg-sky-50 space-y-1">
-                  <div className="flex items-center gap-1 text-xs font-bold text-black">
-                    <Kanban size={14} weight="bold" className="text-sky-700" />
+                <div className="p-2.5 border-2 border-black dark:border-border bg-sky-50 dark:bg-zinc-900/70 space-y-1">
+                  <div className="flex items-center gap-1 text-xs font-bold text-black dark:text-foreground">
+                    <Kanban size={14} weight="bold" className="text-sky-700 dark:text-sky-400" />
                     <span>Board Aktif</span>
                   </div>
                   {topBoard ? (
                     <Link
                       href={`/kanban/${topBoard.id}`}
-                      className="block text-xs font-semibold text-black truncate hover:underline"
+                      className="block text-xs font-semibold text-black dark:text-foreground truncate hover:underline"
                     >
                       {topBoard.title} ({topBoard.cardsCount} kartu)
                     </Link>
@@ -222,19 +222,19 @@ export function DashboardSummaryReport({
                 </div>
 
                 {/* Checklist Snapshot */}
-                <div className="p-2.5 border-2 border-black bg-emerald-50 space-y-1">
-                  <div className="flex items-center gap-1 text-xs font-bold text-black">
+                <div className="p-2.5 border-2 border-black dark:border-border bg-emerald-50 dark:bg-zinc-900/70 space-y-1">
+                  <div className="flex items-center gap-1 text-xs font-bold text-black dark:text-foreground">
                     <CheckSquare
                       size={14}
                       weight="bold"
-                      className="text-emerald-700"
+                      className="text-emerald-700 dark:text-emerald-400"
                     />
                     <span>Checklist Aktif</span>
                   </div>
                   {topChecklist ? (
                     <Link
                       href={`/checklists/${topChecklist.id}`}
-                      className="block text-xs font-semibold text-black truncate hover:underline"
+                      className="block text-xs font-semibold text-black dark:text-foreground truncate hover:underline"
                     >
                       {topChecklist.title} ({topChecklist.completedItems}/
                       {topChecklist.totalItems})
@@ -249,13 +249,13 @@ export function DashboardSummaryReport({
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t-2 border-black/10 flex items-center justify-between">
-            <span className="text-xs font-bold text-black">
+          <div className="mt-4 pt-3 border-t-2 border-black/10 dark:border-border flex items-center justify-between">
+            <span className="text-xs font-bold text-black dark:text-foreground">
               Denycode Workspace
             </span>
             <Link
               href="/notes"
-              className="inline-flex items-center gap-1 text-xs font-bold text-black hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-bold text-black dark:text-foreground hover:underline"
             >
               <span>Buka Dokumen</span>
               <ArrowRight size={12} weight="bold" />

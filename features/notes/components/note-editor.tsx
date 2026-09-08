@@ -500,23 +500,23 @@ export function NoteEditor({ note, isLocked = false }: Props) {
   if (isLocked && !sessionPassword) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center">
-        <div className="w-full max-w-md border-2 border-black bg-yellow-50 p-6 sm:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] space-y-4">
-          <div className="inline-flex p-3.5 bg-rose-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] rounded-full">
+        <div className="w-full max-w-md border-2 border-border bg-card p-6 sm:p-8 shadow-[6px_6px_0px_0px_var(--border)] space-y-4">
+          <div className="inline-flex p-3.5 bg-rose-400 text-black border-2 border-border shadow-[2px_2px_0px_0px_var(--border)] rounded-full">
             <Lock size={32} weight="fill" />
           </div>
 
           <div className="space-y-1.5">
-            <h2 className="text-xl font-black text-black">Catatan Terkunci</h2>
-            <p className="text-xs text-neutral-700 leading-relaxed max-w-xs mx-auto">
+            <h2 className="text-xl font-black text-foreground">Catatan Terkunci</h2>
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto">
               Dokumen ini dienkripsi dengan{" "}
-              <strong>AES-256 Envelope Encryption</strong>. Masukkan password
+              <strong className="text-foreground">AES-256 Envelope Encryption</strong>. Masukkan password
               catatan Anda untuk mendekripsi dan membaca isinya.
             </p>
           </div>
 
           <form onSubmit={handleUnlock} className="space-y-3 pt-2">
             <div className="space-y-1 text-left">
-              <label className="text-xs font-bold text-black">
+              <label className="text-xs font-bold text-foreground">
                 Password Catatan
               </label>
               <input
@@ -527,7 +527,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
                 value={unlockPasswordInput}
                 onChange={(e) => setUnlockPasswordInput(e.target.value)}
                 placeholder="Masukkan password catatan"
-                className="w-full px-3 py-2 text-xs border-2 border-black focus:outline-none focus:bg-white"
+                className="w-full px-3 py-2 text-xs border-2 border-border bg-card text-foreground focus:outline-none"
               />
             </div>
 
@@ -535,7 +535,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
               suppressHydrationWarning
               type="submit"
               disabled={isUnlocking || !unlockPasswordInput}
-              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform disabled:opacity-50 min-h-[36px] cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black bg-yellow-400 hover:bg-yellow-300 text-black border-2 border-border shadow-[3px_3px_0px_0px_var(--border)] hover:-translate-y-0.5 transition-transform disabled:opacity-50 min-h-[36px] cursor-pointer"
             >
               {isUnlocking ? (
                 <>
@@ -555,8 +555,8 @@ export function NoteEditor({ note, isLocked = false }: Props) {
             </button>
           </form>
 
-          <div className="pt-2 border-t-2 border-black/10 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-neutral-600">
-            <ShieldCheck size={14} weight="bold" className="text-emerald-700" />
+          <div className="pt-2 border-t-2 border-black/10 dark:border-border flex items-center justify-center gap-1.5 text-[11px] font-semibold text-neutral-600 dark:text-zinc-400">
+            <ShieldCheck size={14} weight="bold" className="text-emerald-700 dark:text-emerald-400" />
             <span>Enkripsi terisolasi & aman</span>
           </div>
         </div>
@@ -762,12 +762,12 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       />
 
       {/* Title + save state bar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b-2 border-black bg-white sticky top-0 z-10 gap-4">
+      <div className="flex items-center justify-between px-6 py-3 border-b-2 border-border bg-card text-foreground sticky top-0 z-10 gap-4">
         <input
           suppressHydrationWarning
           value={title}
           onChange={handleTitleChange}
-          className="text-xl font-bold bg-transparent outline-none flex-1"
+          className="text-xl font-bold bg-transparent outline-none flex-1 text-foreground placeholder:text-muted-foreground"
           placeholder="Judul catatan"
         />
         <div className="flex items-center gap-2">
@@ -788,7 +788,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-2 border-b border-black/15 bg-white sticky top-[57px] z-10 items-center">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-2 border-b border-border/20 bg-card text-foreground sticky top-[57px] z-10 items-center">
         {/* Media & Image Upload Button */}
         <div className="flex gap-0.5">
           <button
@@ -796,7 +796,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
             type="button"
             onClick={handleOpenImagePicker}
             title="Unggah Gambar (Otomatis WebP 80% ke ImageKit)"
-            className="px-2 py-1 text-xs font-mono border border-black/30 transition-colors select-none cursor-pointer flex items-center gap-1 bg-white text-neutral-800 hover:bg-yellow-100 hover:border-black"
+            className="px-2 py-1 text-xs font-mono border border-border/40 transition-colors select-none cursor-pointer flex items-center gap-1 bg-card text-foreground hover:bg-yellow-300 hover:text-black hover:border-border"
           >
             <ImageIcon size={14} weight="bold" />
             <span>Gambar</span>
@@ -811,8 +811,8 @@ export function NoteEditor({ note, isLocked = false }: Props) {
                 key={idx}
                 onClick={action}
                 title={title}
-                className={`px-2 py-1 text-xs font-mono border border-black/30 transition-colors select-none cursor-pointer flex items-center gap-1
-                  ${active ? "bg-yellow-400 border-black font-bold text-black" : "bg-white text-neutral-800 hover:bg-yellow-100 hover:border-black"}`}
+                className={`px-2 py-1 text-xs font-mono border border-border/40 transition-colors select-none cursor-pointer flex items-center gap-1
+                  ${active ? "bg-yellow-400 border-border font-bold text-black" : "bg-card text-foreground hover:bg-yellow-300 hover:text-black hover:border-border"}`}
               >
                 {label}
               </button>
@@ -823,18 +823,18 @@ export function NoteEditor({ note, isLocked = false }: Props) {
 
       {/* Uploading Banner State */}
       {isUploadingImage && (
-        <div className="px-6 py-2 bg-yellow-100 border-b-2 border-black flex items-center justify-between gap-2 text-xs font-bold text-neutral-900 animate-in fade-in duration-150">
+        <div className="px-6 py-2 bg-yellow-100 dark:bg-yellow-950/80 border-b-2 border-black dark:border-yellow-700 flex items-center justify-between gap-2 text-xs font-bold text-neutral-900 dark:text-yellow-200 animate-in fade-in duration-150">
           <div className="flex items-center gap-2">
             <CircleNotch
               size={16}
               weight="bold"
-              className="animate-spin text-black shrink-0"
+              className="animate-spin text-black dark:text-yellow-400 shrink-0"
             />
             <span>
               Sedang mengompresi gambar (WebP 80%) & mengunggah ke ImageKit...
             </span>
           </div>
-          <span className="text-[10px] font-mono uppercase bg-black text-yellow-400 px-1.5 py-0.5">
+          <span className="text-[10px] font-mono uppercase bg-black dark:bg-yellow-400 text-yellow-400 dark:text-black font-black px-1.5 py-0.5">
             Upload Aktif
           </span>
         </div>
@@ -849,15 +849,15 @@ export function NoteEditor({ note, isLocked = false }: Props) {
       {/* Insert Markdown Modal Dialog */}
       {isInsertMarkdownOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-2xl bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-5 space-y-4">
-            <div className="flex items-center justify-between border-b-2 border-black pb-3">
+          <div className="w-full max-w-2xl bg-card text-foreground border-2 border-border shadow-[8px_8px_0px_0px_var(--border)] p-5 space-y-4">
+            <div className="flex items-center justify-between border-b-2 border-border/20 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-yellow-400 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                <div className="p-1.5 bg-yellow-400 text-black border border-border shadow-[1px_1px_0px_0px_var(--border)]">
                   <MarkdownLogo size={22} weight="bold" />
                 </div>
                 <div>
-                  <h3 className="font-black text-sm text-black">Sisipkan Konten Markdown</h3>
-                  <p className="text-[11px] text-neutral-600">
+                  <h3 className="font-black text-sm text-foreground">Sisipkan Konten Markdown</h3>
+                  <p className="text-[11px] text-muted-foreground">
                     Tempel teks Markdown (heading, table, list, code block, mermaid) untuk langsung dirender.
                   </p>
                 </div>
@@ -865,7 +865,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
               <button
                 type="button"
                 onClick={() => setIsInsertMarkdownOpen(false)}
-                className="p-1 border border-black hover:bg-neutral-100 cursor-pointer"
+                className="p-1 border border-border bg-card text-foreground hover:bg-muted cursor-pointer"
                 title="Tutup"
               >
                 <X size={18} weight="bold" />
@@ -878,20 +878,20 @@ export function NoteEditor({ note, isLocked = false }: Props) {
                 onChange={(e) => setMarkdownInput(e.target.value)}
                 placeholder={`# Heading\n\nParagraf dengan **tebal**, *miring*, dan \`code\`.\n\n- [ ] Task 1\n- [x] Task 2 selesai\n\n\`\`\`mermaid\nflowchart TD\n    A[Mulai] --> B[Selesai]\n\`\`\``}
                 rows={10}
-                className="w-full p-3 font-mono text-xs border-2 border-black focus:outline-none focus:bg-yellow-50/50 resize-y leading-relaxed"
+                className="w-full p-3 font-mono text-xs border-2 border-border bg-card text-foreground focus:outline-none resize-y leading-relaxed"
                 autoFocus
               />
-              <div className="flex justify-between items-center text-[10px] text-neutral-500 font-mono">
+              <div className="flex justify-between items-center text-[10px] text-muted-foreground font-mono">
                 <span>Tip: Teks Markdown juga dapat ditempelkan langsung (Ctrl+V) ke editor.</span>
                 <span>{markdownInput.split("\n").length} baris | {markdownInput.length} karakter</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/15">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/20">
               <button
                 type="button"
                 onClick={() => setIsInsertMarkdownOpen(false)}
-                className="px-3 py-1.5 text-xs font-bold border border-black bg-white hover:bg-neutral-100 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                className="px-3 py-1.5 text-xs font-bold border border-border bg-card text-foreground hover:bg-muted cursor-pointer shadow-[2px_2px_0px_0px_var(--border)]"
               >
                 Batal
               </button>
@@ -899,7 +899,7 @@ export function NoteEditor({ note, isLocked = false }: Props) {
                 type="button"
                 onClick={handleInsertMarkdownSubmit}
                 disabled={!markdownInput.trim()}
-                className="px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform cursor-pointer disabled:opacity-50"
+                className="px-4 py-1.5 text-xs font-black bg-yellow-400 hover:bg-yellow-300 text-black border-2 border-border shadow-[3px_3px_0px_0px_var(--border)] hover:-translate-y-0.5 transition-transform cursor-pointer disabled:opacity-50"
               >
                 Sisipkan ke Catatan
               </button>

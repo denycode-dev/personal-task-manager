@@ -32,7 +32,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-black flex justify-around px-2 py-3 z-50">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card text-foreground border-t-2 border-border flex justify-around px-2 py-3 z-50">
       {navItems.map((item) => (
         <Link
           key={item.href}
@@ -40,7 +40,7 @@ export function BottomNav() {
           prefetch={true}
           className={cn(
             "flex flex-col items-center gap-0.5 text-xs active:scale-90 transition-transform",
-            pathname === item.href ? "font-bold" : "text-muted-foreground",
+            pathname === item.href ? "font-bold text-foreground" : "text-muted-foreground",
           )}
         >
           <span className="text-xl">{item.icon}</span>

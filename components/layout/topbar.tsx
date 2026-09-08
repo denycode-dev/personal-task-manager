@@ -3,6 +3,7 @@ import { GlobalSearch } from "@/features/search/components/global-search";
 import { logoutAction } from "@/features/auth/actions/logout.action";
 import { SignOut, Bell } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function Topbar() {
   const [deadlineCount, setDeadlineCount] = useState(0);
@@ -15,9 +16,10 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between gap-4 px-4 h-14 border-b-2 border-black bg-white">
+    <header className="sticky top-0 z-40 flex items-center justify-between gap-4 px-4 h-14 border-b-2 border-border bg-card text-foreground">
       <GlobalSearch />
       <div className="flex items-center gap-3">
+        <ThemeToggle />
         <div className="relative">
           <Bell size={20} className="text-muted-foreground" />
           {deadlineCount > 0 && (
@@ -30,7 +32,7 @@ export function Topbar() {
           <button
             suppressHydrationWarning
             type="submit"
-            className="flex items-center gap-1 text-sm font-medium hover:text-red-600 transition-colors"
+            className="flex items-center gap-1 text-sm font-medium hover:text-red-600 transition-colors cursor-pointer"
           >
             <SignOut size={16} weight="bold" />
             <span className="hidden sm:inline">Keluar</span>

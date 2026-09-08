@@ -27,7 +27,7 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
       quickActionLabel: "Tulis Baru",
       icon: <NotePencil size={24} weight="bold" />,
       metricLabel: `${stats.totalNotes} Catatan`,
-      colorTheme: "bg-yellow-100 hover:bg-yellow-200/90",
+      colorTheme: "bg-yellow-100 hover:bg-yellow-200/90 dark:bg-card dark:hover:bg-zinc-900/90 dark:border-border",
       badgeColor: "bg-yellow-400 text-black",
       buttonColor: "bg-yellow-400 hover:bg-yellow-300",
     },
@@ -41,7 +41,7 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
       quickActionLabel: "Papan Baru",
       icon: <Kanban size={24} weight="bold" />,
       metricLabel: `${stats.totalBoards} Papan • ${stats.totalCards} Kartu`,
-      colorTheme: "bg-sky-100 hover:bg-sky-200/90",
+      colorTheme: "bg-sky-100 hover:bg-sky-200/90 dark:bg-card dark:hover:bg-zinc-900/90 dark:border-border",
       badgeColor: "bg-sky-400 text-black",
       buttonColor: "bg-sky-400 hover:bg-sky-300",
     },
@@ -55,7 +55,7 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
       quickActionLabel: "Checklist Baru",
       icon: <CheckSquare size={24} weight="bold" />,
       metricLabel: `${stats.checklistDone}/${stats.checklistTotal} Selesai (${stats.checklistCompletionRate}%)`,
-      colorTheme: "bg-emerald-100 hover:bg-emerald-200/90",
+      colorTheme: "bg-emerald-100 hover:bg-emerald-200/90 dark:bg-card dark:hover:bg-zinc-900/90 dark:border-border",
       badgeColor: "bg-emerald-400 text-black",
       buttonColor: "bg-emerald-400 hover:bg-emerald-300",
     },
@@ -69,7 +69,7 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
       quickActionLabel: "Buka Kalender",
       icon: <CalendarBlank size={24} weight="bold" />,
       metricLabel: "Linimasa Terpadu",
-      colorTheme: "bg-purple-100 hover:bg-purple-200/90",
+      colorTheme: "bg-purple-100 hover:bg-purple-200/90 dark:bg-card dark:hover:bg-zinc-900/90 dark:border-border",
       badgeColor: "bg-purple-400 text-black",
       buttonColor: "bg-purple-400 hover:bg-purple-300",
     },
@@ -83,7 +83,7 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
       quickActionLabel: "Kelola Folder",
       icon: <FolderSimple size={24} weight="bold" />,
       metricLabel: `${stats.totalFolders} Folder Aktif`,
-      colorTheme: "bg-orange-100 hover:bg-orange-200/90",
+      colorTheme: "bg-orange-100 hover:bg-orange-200/90 dark:bg-card dark:hover:bg-zinc-900/90 dark:border-border",
       badgeColor: "bg-orange-400 text-black",
       buttonColor: "bg-orange-400 hover:bg-orange-300",
     },
@@ -92,8 +92,8 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base sm:text-lg font-black uppercase tracking-tight text-black">
-          <Compass size={20} weight="bold" className="text-black" />
+        <h2 className="flex items-center gap-2 text-base sm:text-lg font-black uppercase tracking-tight text-black dark:text-foreground">
+          <Compass size={20} weight="bold" className="text-black dark:text-foreground" />
           Pusat Navigasi Fitur (Navigation Hub)
         </h2>
         <span className="text-xs font-semibold text-muted-foreground hidden sm:inline">
@@ -109,7 +109,7 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
           >
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="p-2 bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black">
+                <span className="p-2 bg-white dark:bg-zinc-800 border-2 border-black dark:border-border shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black dark:text-foreground">
                   {item.icon}
                 </span>
                 <span
@@ -119,18 +119,18 @@ export function DashboardNavigationHub({ stats }: DashboardNavigationHubProps) {
                 </span>
               </div>
 
-              <h3 className="text-lg font-black text-black leading-snug">
+              <h3 className="text-lg font-black text-black dark:text-foreground leading-snug">
                 {item.title}
               </h3>
-              <p className="text-xs font-medium text-black/75 mt-1 leading-relaxed">
+              <p className="text-xs font-medium text-black/75 dark:text-zinc-300 mt-1 leading-relaxed">
                 {item.description}
               </p>
             </div>
 
-            <div className="mt-5 pt-3 border-t-2 border-black/20 flex items-center justify-between gap-2">
+            <div className="mt-5 pt-3 border-t-2 border-black/20 dark:border-border flex items-center justify-between gap-2">
               <Link
                 href={item.href}
-                className="inline-flex items-center gap-1.5 text-xs font-black text-black hover:underline decoration-2"
+                className="inline-flex items-center gap-1.5 text-xs font-black text-black dark:text-foreground hover:underline decoration-2"
               >
                 <span>Buka Modul</span>
                 <ArrowRight size={14} weight="bold" />

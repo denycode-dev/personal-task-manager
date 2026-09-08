@@ -7,6 +7,7 @@ import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRef } from "react";
 import { ImageKitProvider } from "@imagekit/next";
+import { ThemeProvider } from "next-themes";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -22,12 +23,20 @@ export function Providers({
     imagekitUrlEndpoint || process.env.IMAGEKIT_URL_ENDPOINT || "";
 
   return (
-    <QueryClientProvider client={clientRef.current}>
-      <ImageKitProvider urlEndpoint={urlEndpoint}>{children}</ImageKitProvider>
-      <Toaster position="bottom-right" richColors />
-      <ConnectionStatus />
-      <InstallPrompt />
-      <ConfirmDialog />
-    </QueryClientProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="light"
+      themes={["light", "dark", "read"]}
+      enableSystem={false}
+      disableTransitionOnChange={false}
+    >
+      <QueryClientProvider client={clientRef.current}>
+        <ImageKitProvider urlEndpoint={urlEndpoint}>{children}</ImageKitProvider>
+        <Toaster position="bottom-right" richColors />
+        <ConnectionStatus />
+        <InstallPrompt />
+        <ConfirmDialog />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

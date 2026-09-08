@@ -26,7 +26,7 @@ export function UpcomingDeadlinesWidget({ deadlines }: UpcomingDeadlinesWidgetPr
             <ClockCountdown size={20} weight="bold" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-black leading-tight">
+            <h2 className="text-lg font-black text-black dark:text-foreground leading-tight">
               Akan Jatuh Tempo
             </h2>
             <p className="text-xs font-semibold text-muted-foreground">
@@ -36,31 +36,31 @@ export function UpcomingDeadlinesWidget({ deadlines }: UpcomingDeadlinesWidgetPr
         </div>
 
         {deadlines.length > 0 ? (
-          <span className="px-2.5 py-1 text-xs font-black bg-rose-100 text-rose-800 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <span className="px-2.5 py-1 text-xs font-black bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 dark:border-rose-700/80 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             {deadlines.length} Tugas
           </span>
         ) : (
-          <span className="px-2.5 py-1 text-xs font-black bg-emerald-100 text-emerald-800 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <span className="px-2.5 py-1 text-xs font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200 dark:border-emerald-700/80 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             Terkendali
           </span>
         )}
       </div>
 
       {deadlines.length === 0 ? (
-        <div className="p-6 border-2 border-dashed border-black/30 bg-emerald-50/50 text-center space-y-3">
-          <div className="inline-flex p-3 bg-emerald-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] rounded-full">
+        <div className="p-6 border-2 border-dashed border-black/30 dark:border-border bg-emerald-50/50 dark:bg-zinc-900/40 text-center space-y-3">
+          <div className="inline-flex p-3 bg-emerald-300 dark:bg-emerald-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] rounded-full">
             <CheckCircle size={28} weight="fill" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-black text-black">Semua Tugas Aman! 🎉</h3>
-            <p className="text-xs text-neutral-600 max-w-sm mx-auto">
+            <h3 className="text-sm font-black text-black dark:text-foreground">Semua Tugas Aman! 🎉</h3>
+            <p className="text-xs text-neutral-600 dark:text-zinc-300 max-w-sm mx-auto">
               Tidak ada kartu kanban atau checklist yang mendesak dalam 48 jam ke depan.
             </p>
           </div>
           <div className="pt-1">
             <Link
               href="/calendar"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs font-bold border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-800 text-xs font-bold border-2 border-black dark:border-border text-black dark:text-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform"
             >
               <CalendarBlank size={14} weight="bold" />
               <span>Buka Kalender Lengkap</span>
@@ -86,7 +86,7 @@ export function UpcomingDeadlinesWidget({ deadlines }: UpcomingDeadlinesWidgetPr
               <Link
                 key={`${item.source}-${item.id}`}
                 href={targetHref}
-                className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 border-2 border-black bg-neutral-50 hover:bg-yellow-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 border-2 border-black dark:border-border bg-neutral-50 dark:bg-zinc-900/70 hover:bg-yellow-50 dark:hover:bg-zinc-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
               >
                 <div className="flex items-start sm:items-center gap-3">
                   <span
@@ -96,15 +96,15 @@ export function UpcomingDeadlinesWidget({ deadlines }: UpcomingDeadlinesWidgetPr
                   </span>
 
                   <div className="min-w-0">
-                    <p className="font-bold text-sm text-black truncate group-hover:underline decoration-2">
+                    <p className="font-bold text-sm text-black dark:text-foreground truncate group-hover:underline decoration-2">
                       {item.title}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1 font-medium capitalize">
                         {item.source === "kanban" ? (
-                          <Kanban size={13} weight="bold" className="text-sky-600" />
+                          <Kanban size={13} weight="bold" className="text-sky-600 dark:text-sky-400" />
                         ) : (
-                          <CheckSquare size={13} weight="bold" className="text-emerald-600" />
+                          <CheckSquare size={13} weight="bold" className="text-emerald-600 dark:text-emerald-400" />
                         )}
                         {item.source}
                       </span>
@@ -122,7 +122,7 @@ export function UpcomingDeadlinesWidget({ deadlines }: UpcomingDeadlinesWidgetPr
                 </div>
 
                 <div className="flex items-center justify-end sm:shrink-0">
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-black group-hover:translate-x-1 transition-transform">
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-black dark:text-foreground group-hover:translate-x-1 transition-transform">
                     <span>Lihat</span>
                     <ArrowRight size={14} weight="bold" />
                   </span>
